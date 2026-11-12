@@ -23,8 +23,8 @@
 
     const CONFIG = {
         EMBLEM_SRC: 'res/noble-emblem.png',
-        SAMPLE_WIDTH: 240,          // Horizontal samples taken from the emblem mask
-        DUST_PARTICLES: 2000,       // Free-floating background motes
+        SAMPLE_WIDTH: 300,          // Horizontal samples taken from the emblem mask
+        DUST_PARTICLES: 6000,       // Free-floating background motes
         POINT_SIZE: 30.0,           // Point size at 1080p, one unit from camera
         COLOR: [0.63, 0.84, 1.0],   // Hologram tint (linear-ish sRGB)
         FOV: 42.0,
@@ -479,19 +479,10 @@
     let wordmarkVisible = false;
     let pixelScale = 1;
 
-    // Adaptive resolution: the scene is fill-rate bound (one full-screen pass plus
-    // tens of thousands of additive points), so weak integrated GPUs need fewer
-    // pixels, not fewer particles. Starts sharp and steps down only if frames drag.
-    let qualityScale = 1;
-    let smoothedFrameMs = 16.7;
-    let lastFrameAt = 0;
-    let lastQualityShift = 0;
-
     function resize() {
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const scale = dpr * SCALE * qualityScale;
-        canvas.width = Math.max(1, Math.round(window.innerWidth * scale));
-        canvas.height = Math.max(1, Math.round(window.innerHeight * scale));
+        canvas.width = Math.max(1, Math.round(window.innerWidth * dpr * SCALE));
+        canvas.height = Math.max(1, Math.round(window.innerHeight * dpr * SCALE));
         pixelScale = canvas.height / 1080;
         projection = perspective(CONFIG.FOV, canvas.width / canvas.height, 0.1, 80);
         gl.viewport(0, 0, canvas.width, canvas.height);
@@ -507,25 +498,6 @@
 
     function render(now) {
         if (!startedAt) startedAt = now;
-
-        // Auto quality: if frames are running long, render fewer pixels; if there is
-        // headroom again, step back up. Hysteresis + a cooldown stop it oscillating.
-        const frameMs = now - lastFrameAt;
-        lastFrameAt = now;
-        if (frameMs > 0 && frameMs < 400) {
-            smoothedFrameMs += (frameMs - smoothedFrameMs) * 0.08;
-        }
-        if (now - lastQualityShift > 1200) {
-            if (smoothedFrameMs > 22 && qualityScale > 0.55) {
-                qualityScale = Math.max(0.55, qualityScale - 0.1);
-                lastQualityShift = now;
-                resize();
-            } else if (smoothedFrameMs < 12.5 && qualityScale < 1) {
-                qualityScale = Math.min(1, qualityScale + 0.05);
-                lastQualityShift = now;
-                resize();
-            }
-        }
 
         const elapsed = (now - startedAt) * TIME_SCALE;
         const seconds = elapsed / 1000;

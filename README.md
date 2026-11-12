@@ -21,19 +21,22 @@ Written by **Jackrabbit72380**. Single-file WebGL2 engine, no libraries, no buil
 
 ## Preview
 
-The still above is a looping capture of the real engine — one full cycle: assembled hold,
-fade out, rebuild from the particle shell, settle again.
+The animation above is a looping capture of the real engine — one full cycle: assembled hold,
+fade out, rebuild from the particle shell, settle again. It starts on the assembled emblem so
+the thumbnail opens on the finished mark.
 
 | Property | Value |
 | :--- | :--- |
-| Master | `preview-4k.mp4` — **3840 × 2160**, 16:9, H.264, 5 fps, 14.4 s, 8.0 MB |
-| Inline loop | `preview.webp` — 640 × 360, 16:9, animated WebP, 72 frames, 714 KB |
-| Frame source | Captured from the deployed build at a 1920 × 1080 viewport with 2× device pixel ratio, so the canvas itself renders at 3840 × 2160 |
+| Master | `preview-4k.mp4` — **3840 × 2160**, 16:9, H.264, 5 fps, 14.4 s, 5.9 MB |
+| Inline loop | `preview.webp` — 640 × 360, 16:9, animated WebP, 72 frames, 550 KB |
+| Poster | `poster.jpg` — 1280 × 720 still, for social previews |
+| Capture | 1920 × 1080 viewport at 2× device pixel ratio, so the canvas renders at a true 3840 × 2160 |
 
 Frames were recorded against a frozen animation clock: `requestAnimationFrame` is replaced
-with a manual stepper and advanced exactly 200 ms per frame, so the loop is perfectly even
-rather than drifting with screenshot latency. The loop starts on the assembled emblem so the
-thumbnail opens on the finished mark.
+with a manual stepper and advanced exactly 200 ms per frame, in one continuous session, so
+the timeline is exact instead of drifting with screenshot latency. The inline loop is 640 px
+wide on purpose — a full-cycle animated capture of a particle field is roughly incompressible,
+and a heavy one makes the README page itself chew CPU while it plays.
 
 <br/>
 

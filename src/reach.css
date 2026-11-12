@@ -1,0 +1,56 @@
+/*  NOBLE — Halo: Reach Loading Screen
+ *  Jackrabbit72380
+ *  2026
+ */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: #05070a;
+    overflow: hidden;
+}
+
+#canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+#wordmark {
+    position: absolute;
+    left: 50%;
+    bottom: 12%;
+    width: min(46vw, 620px);
+    opacity: 0;
+    transform: translate(-50%, 10px);
+    transition: opacity 900ms ease, transform 900ms ease;
+    pointer-events: none;
+    user-select: none;
+}
+
+#wordmark.visible {
+    opacity: 0.96;
+    transform: translate(-50%, 0);
+}
+
+#loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8fa9ba;
+    font: 400 13px/1.6 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    transition: opacity 600ms ease;
+}
+
+#loading.hidden {
+    opacity: 0;
+}

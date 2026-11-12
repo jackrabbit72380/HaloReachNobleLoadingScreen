@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Jackrabbit72380">
+    <title>PROJECT NOBLE — Halo: Reach Loading Screen</title>
+    <link rel="stylesheet" type="text/css" href="src/reach.css">
+  </head>
+
+  <body>
+
+    <!-- Render target -->
+    <canvas id="canvas"></canvas>
+
+    <!-- Wordmark overlay, revealed once the emblem has assembled -->
+    <img id="wordmark" src="res/project-noble-wordmark.svg" alt="Project Noble">
+
+    <!-- Boot status, hidden on first frame -->
+    <div id="loading">Assembling</div>
+
+    <!-- Engine -->
+    <script src="src/reach.js"></script>
+
+  </body>
+
+</html>

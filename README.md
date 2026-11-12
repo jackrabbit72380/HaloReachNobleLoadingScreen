@@ -1,16 +1,39 @@
 # PROJECT NOBLE — Halo: Reach Loading Screen
 
-[![PROJECT NOBLE — particle loading screen](https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page/preview.webp)](https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page)
+<p align="center">
+  <a href="https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page">
+    <img src="https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page/preview.webp" alt="PROJECT NOBLE particle loading screen, looping" width="640">
+  </a>
+</p>
 
-**▶ [Watch it live](https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page)** — runs in the browser, nothing to install.
-
-The preview above is a capture of the real animation, looping once through the full cycle:
-hold, fade out, rebuild from the particle shell, then settle again.
+<p align="center">
+  <a href="https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page"><b>▶ Live demo</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page/preview-4k.mp4">⬇ 4K master — 3840×2160, 16:9</a>
+</p>
 
 A particle loading animation: thousands of points drift in from a sphere, assemble the
 Noble Team emblem, and hold while the **PROJECT NOBLE** wordmark fades in beneath it.
 
 Written by **Jackrabbit72380**. Single-file WebGL2 engine, no libraries, no build step.
+
+<br/>
+
+## Preview
+
+The still above is a looping capture of the real engine — one full cycle: assembled hold,
+fade out, rebuild from the particle shell, settle again.
+
+| Property | Value |
+| :--- | :--- |
+| Master | `preview-4k.mp4` — **3840 × 2160**, 16:9, H.264, 5 fps, 14.4 s, 8.0 MB |
+| Inline loop | `preview.webp` — 640 × 360, 16:9, animated WebP, 72 frames, 714 KB |
+| Frame source | Captured from the deployed build at a 1920 × 1080 viewport with 2× device pixel ratio, so the canvas itself renders at 3840 × 2160 |
+
+Frames were recorded against a frozen animation clock: `requestAnimationFrame` is replaced
+with a manual stepper and advanced exactly 200 ms per frame, so the loop is perfectly even
+rather than drifting with screenshot latency. The loop starts on the assembled emblem so the
+thumbnail opens on the finished mark.
 
 <br/>
 

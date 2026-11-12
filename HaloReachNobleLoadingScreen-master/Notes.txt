@@ -1,0 +1,237 @@
+
+//////////////////////////////
+//// WebGL Halo Animation ////
+//////////////////////////////
+
+
+/*--- Tasks ---*/
+
+Core Functionality
+1. Texture particles (DONE)
+2. Camera movement (DONE)
+  > Splines! (DONE)
+  > Match FOV (DONE)
+3. Cubes (DONE)
+4. Lines (DONE)
+5. Background (DONE)
+6. Vingette (DONE)
+
+Enhancements
+- Precompute swerve points (DONE)
+- Free camera movement
+- Easter eggs (Huehuehue)
+
+
+
+/*--- Image Data Organization ---*/
+
+Initial Position
+  R: x pos
+  G: y pos
+  B: z pos
+  A: ---
+
+Final Position
+  R: x pos
+  G: y pos
+  B: z pos
+  A: ---
+
+Position
+  R: x pos
+  G: y pos
+  B: z pos
+  A: ---
+
+Data Dynamic
+  R: Alpha
+  G: Brightness
+  B: ---
+  A: ---
+
+Data Static
+  R: Wait
+  G: Seed
+  B: Ambient
+  A: Damaged
+
+
+/*--- Frame Buffer Objects ---*/
+
+1. fbo_pos_initial   // Unchanging
+2. fbo_pos_final     // Unchanging
+3. fbo_pos           // Updated by prog_position
+4. fbo_data_dynamic  // Updated by prog_data
+5. fbo_data_static   // Unchanging
+
+
+/*--- Cool & Useful Calculations ---*/
+
+  // Procedural Float Generator [-1, 1]
+  // Note: Consistently returns the same pseudo-random float for the same two input values.  
+  float generate_float(float value_one, float value_two) {
+      float seed_one = 78.0;
+      float seed_two = 1349.0;
+      float magnitude = (mod(floor(value_one * seed_one + value_two * seed_two), 100.0) / 100.0) * 2.0 - 1.0;
+      return magnitude;
+  }
+
+  // Quadratic Spline Interpolator
+  // Note: Returns a position in 3D space representing a particle's location on
+  //       a smooth bezier curve between three points given factor t [0-1]. 
+  // Source: https://forum.unity.com/threads/getting-a-point-on-a-bezier-curve-given-distance.382785/ 
+  vec3 interpolate_location(vec3 v1, vec3 v2, vec3 v3, float t) {
+         float x = (((1.0 - t) * (1.0 - t)) * v1.x) + (2.0 * t * (1.0 - t) * v2.x) + ((t * t) * v3.x);
+         float y = (((1.0 - t) * (1.0 - t)) * v1.y) + (2.0 * t * (1.0 - t) * v2.y) + ((t * t) * v3.y);
+         float z = (((1.0 - t) * (1.0 - t)) * v1.z) + (2.0 * t * (1.0 - t) * v2.z) + ((t * t) * v3.z);
+         return vec3(x, y, z);
+  }
+
+
+/*--- Dev Diary ---*/
+
+05.04.2020
+  I've rediscovered while working on particle position calculation that JavaScript's decimal
+  math is broken. Any operation that would suffer from unpredictable rounding errors should
+  make use of an external library. For this project, I've decided on decimal.js.
+
+05.04.2020
+  Fun fact: even if no operation is performed on a frame buffer object, its values
+  will subtly change over time when run through a shader. I spent about four hours pulling
+  my hair out today trying to discern why each particle's unaltered wait value became more
+  random over the course of each simulation. This is why.
+
+05.08.2020
+  After two days and an accidental all-nighter, I've been unable to derive a bug-free
+  algorithm that generates final particle positions for each slice given a variable
+  particle count per slice. But even if I had figured it out, the approach would have
+  had a few drawbacks. For one, it's verbose. My current buggy implementation comes
+  out at ~100 lines of obscure calculations. The algorithm also would have restricted
+  slices to a rectangular shape, which is artistically inflexible and doesn't match the
+  original animation. For these reasons, I've decided to take a more literal approach
+  moving forward. Rather than a complex generation system, I'll just write a method that
+  returns hard coded position offsets for each slice particle. It's not sophisticated.
+  But it is flexible, bug-proof, and can be changed in about 10 minutes with paper and
+  pencil.
+
+05.08.2020
+  Particle animation is complete! Next up is proper camera movement. In previous projects
+  that required smooth position animation, I've spent time deriving trig equations that 
+  trace the desired path as closely as possible. It's a relatively quick fix, but results
+  in a mathematical mess that's impossible to read or change later. Even if I didn't mind
+  the mess, the camera animation in this project is just too complex for the approach to
+  be reasonable. So, it's time to learn splines! The three point interpolator I found for
+  particle animation is a great start. But, it's hard to imagine having more flexibility
+  than a function that takes (locations[], factor) and returns a point in 3D space. Some
+  resources I've gathered in early research:
+  UCLA Paper: https://www.math.ucla.edu/~baker/149.1.02w/handouts/dd_splines.pdf
+  The DeCastleljau Algorithm: https://ibiblio.org/e-notes/Splines/bezier.html
+
+05.15.2020
+  To make the process of learning spline interpolation a bit more fun, I ended up building a
+  pretty cool litte realtime demo in Java: https://github.com/Xephorium/SplineInterpolator
+
+05.23.2020
+  Just realized the slice shape used until now is wider than in the original animation. It
+  took all of five minutes to update without pencil or paper. Very grateful for the constant
+  offset approach. :) 
+
+05.25.2020
+  While stumbling through the refactor to texture each ring block, I've discovered a pretty
+  fundamental principle of 3D graphics. It's impossible to draw a vertex with multiple uv
+  coordinates. This sounds obvious, but think about a cube. Along the cube's seams, a single
+  vertex might have uv coordinates [0,1] for one face and [1,0] for a neighboring face. Yet,
+  each vertex processed by the vertex shader must have one and only one set of texture coords.
+  The solution to this problem is to duplicate the vertices. Each triangle must be drawn
+  between three vertices with data unique to that face (uv coords, normals, etc). The approach
+  may sound inefficient, but it's apparently how every rendering engine works under the hood.
+  For more info, see the links below:
+  https://community.khronos.org/t/texture-coordinates-per-face-index-instead-of-per-vertex/2484
+  https://stackoverflow.com/questions/36532924/how-can-i-specify-multiple-uv-coordinates-for-same-vertexes-with-vaos-vbos
+
+06.23.2020
+  I've done a pretty decent job of sidestepping WebGL's vertex limit for a single draw call up
+  until now. For block rendering, I found a neat extension ('OES_element_index_uint') that
+  increases the buffer size from 16 to 32 bits. This was apparently ample room to draw all ring
+  blocks at once. But, even the increased buffer size isn't enough for the massive geometry of the
+  background grid. 319,264 unique points. Even Sublime churns for a few seconds opening the file.
+  Rather than continuing to search for workarounds, I've finally accepted the limitation. Today's
+  commit adds logic to dynamically build a list of VAO's, each with a predefined max size, to render
+  the entire grid through multiple draw calls. The result is glorious. ~150,000 lines drawn on screen
+  with no framerate drop. I love this hobby.
+
+06.27.2020
+  As of two days ago, the loading screen is officially feature complete! A subtle background vingette
+  was the final touch. With all the main functionality now done and the animation hosted online, I've
+  switched my focus to artistic adjustments and optimization. In particular, there have been a plethora
+  of minor camera path improvements. It never feels quite right. I'm sure the endless edits have made a
+  mess of my commit history. That said, optimization is going to be fun. I realized today that I can start
+  pulling timing calculations out of the shader code. As is, the project determines loop completion
+  percent for either every vertex or every pixel depending on the draw call. Eliminating that massive
+  duplicate calculation ought to take a huge chunk out of the work the GPU has to do each frame.
+
+07.04.2020
+  I'm losing my mind trying to diagnose a subtle, random jitter in ring assembly particles. After replacing
+  the three-point quadratic position calculation with simple linear interpolation, the problem disappeared.
+  This led me to believe the quadratic calculation was the problem. However, building a comparable function
+  that calculated the path between three points using only linear interpolation produced the same effect. So,
+  the problem must be floating point accuracy while storing the pisitions in an image texture, right? To
+  test the theory, I removed the position FBO altogether. At this point, all position calculations are 
+  performed in real time in the particle vertex shader. Yet, the jitter remains. At least I learned that the
+  position and dynamic data FBO's were never really necessary while diagnosing this nightmare. The actual
+  position calculation is all that's left, so it must be the problem. Or, maybe random change in an input
+  to those calculations? Or some issue with the precision of operations performed in GLSL. Gonna work on
+  testing the second.
+
+
+/*--- Resources & Factoids ---*/
+
+Resources
+  Attributes: https://webglfundamentals.org/webgl/lessons/webgl-attributes.html
+  Buffers & Attributes: https://webglfundamentals.org/webgl/lessons/webgl-how-it-works.html
+  Buffers vs Framebuffers: https://stackoverflow.com/a/13443183
+
+Factoids
+  gl.enableVertexAttribArray(x); // Here, x is the index of the shader attribute to recieve
+                                 // vertex info.
+
+
+/*--- WebGL Basics ---*/
+
+I expect to forget 80% of what I learned in my Computer Graphics class. So here's a
+crash course in the core concepts, with a focus on what's needed for this project.
+
+Shaders: WebGL shaders facilitate coding directly to GPU. They're the code blocks at the top
+stored as strings and labeled vertex_* or frag_*. These names represent the two halves of each
+shader. While the purpose of each half can become muddied in practice, the vertex shader is
+generally used to perform operations on vertices and the fragment half determines how the
+faces between vertices will appear. (fragment = face in WebGL.) For more details at Stack
+Overflow: https://stackoverflow.com/questions/4421261/vertex-shader-vs-fragment-shader
+
+Object display: Say we want to display an object in WebGL. One way to approach this is as
+follows. Parse the object data from an .obj file (vertices, UV coordinates, normals, etc.) in
+JavaScript. Prepare transformation matrices to be applied to the object (scale, rotate, invert,
+etc.) in JavaScript. Send object data and transformation matrices to vertex shader, which
+performs transformations on each vertex. Then, in the vertex shader, perform a final transformation
+to determine what the object looks like to the virtual camera. Lots of linear algebra and vector
+math. Send any required data from the vertex shader to the fragment shader, which determines the
+color of each pixel in the resulting image or to display on the screen. Each image we want
+to view or process (including the final image rendered to the screen) must be stored in a Frame
+Buffer Object (FBO), which we can modify using the GPU through shaders.
+
+Hardware: Anything in a shader (precompiled code stored in a variable) runs on the GPU. Anything
+outside a shader (in this case, JavaScript), runs on the CPU. 
+
+Particle Systems: Particle systems in WebGL basically consist of a list of positions, on which
+we can perform operations. The positions are then run through a view matrix transformation to
+determine their position on the screen, and represented by a single point of variable size and
+color.
+
+Particle System Efficiency: Performing operations on each particle position can be done in
+JavaScript and then sent to a shader for their final transformation and rendering. However,
+this has significant performance limitations. Remember that JavaScript uses the CPU. GPU's
+on the other hand were built for massive parallel processing. Therefore, we want to offload
+particle calculations to a shader, where they're *much* faster. We do this by storing all 
+particle information in pixels of an image. Position image: R = x, G = y, B = z, A = whatever.
+Each image can then be stored in a frame buffer object, on which shaders can directly perform
+calculations before display. :)

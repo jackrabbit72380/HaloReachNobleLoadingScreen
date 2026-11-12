@@ -1,8 +1,11 @@
 # PROJECT NOBLE — Halo: Reach Loading Screen
 
-[![PROJECT NOBLE — particle loading screen](https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page/preview.jpg)](https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page)
+[![PROJECT NOBLE — particle loading screen](https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page/preview.webp)](https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page)
 
 **▶ [Watch it live](https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page)** — runs in the browser, nothing to install.
+
+The preview above is a capture of the real animation, looping once through the full cycle:
+hold, fade out, rebuild from the particle shell, then settle again.
 
 A particle loading animation: thousands of points drift in from a sphere, assemble the
 Noble Team emblem, and hold while the **PROJECT NOBLE** wordmark fades in beneath it.

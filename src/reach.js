@@ -23,16 +23,22 @@
 
     const CONFIG = {
         EMBLEM_SRC: 'res/noble-emblem.png',
-        SAMPLE_WIDTH: 300,          // Horizontal samples taken from the emblem mask
-        DUST_PARTICLES: 1600,       // Free-floating background motes
+        SAMPLE_WIDTH: 240,          // Horizontal samples taken from the emblem mask
+        DUST_PARTICLES: 2000,       // Free-floating background motes
         POINT_SIZE: 30.0,           // Point size at 1080p, one unit from camera
         COLOR: [0.63, 0.84, 1.0],   // Hologram tint (linear-ish sRGB)
         FOV: 42.0,
-        ASSEMBLY_MS: 4200,          // Time for every particle to reach the emblem
+        ASSEMBLY_MS: 7800,          // Time for every particle to reach the emblem
         HOLD_MS: 5200,              // Assembled screen time
         FADE_MS: 1300,              // Scene fade before the loop restarts
         FADE_IN_MS: 900,            // Opening fade from black
-        EMBLEM_HEIGHT: 4.6          // World-space height of the finished emblem
+        EMBLEM_HEIGHT: 4.6,         // World-space height of the finished emblem
+        EMBLEM_LIFT: 0.0,           // Vertical offset in world units (0 = dead centre)
+        SPIN_TURNS: 1.0,            // Exactly one turn around Y, easing to 0 as it locks in
+        EMBLEM_DEPTH: 0.9,          // Front-to-back thickness of the particle slab
+        DUST_WIDTH: 12.0,           // Half-extent of the ambient field
+        DUST_HEIGHT: 6.5
+
     };
 
     /*--- DOM & Context ---*/
@@ -120,18 +126,20 @@
         uniform float uFade;
 
         out float vAlpha;
+        out float vShade;
 
         void main() {
             vec3 position;
 
             if (aKind > 0.5) {
-                // Ambient dust: slow, self-contained drift
+                // Ambient dust: slow drift, matched to the pace of the original field
                 position = aStart + vec3(
-                    sin(uTime * 0.35 + aTarget.w * 41.0),
-                    cos(uTime * 0.28 + aTarget.w * 37.0),
-                    sin(uTime * 0.22 + aTarget.w * 19.0)
-                ) * 0.30;
-                vAlpha = 0.16 * uFade;
+                    sin(uTime * 0.055 + aTarget.w * 41.0),
+                    cos(uTime * 0.042 + aTarget.w * 37.0),
+                    sin(uTime * 0.031 + aTarget.w * 19.0)
+                ) * 0.9;
+                vAlpha = 0.14 * uFade;
+                vShade = 0.75;
             } else {
                 // Assembly: staggered, eased, curved path start -> swerve -> target
                 float t = clamp((uProgress - aTarget.w * 0.60) / 0.40, 0.0, 1.0);
@@ -149,6 +157,11 @@
                 ) * 0.0035 * t;
 
                 vAlpha = uFade * smoothstep(0.02, 0.28, t);
+
+                // Depth shading: the far face of the slab reads dimmer, which sells the
+                // volume once the mark has finished turning.
+                float halfDepth = ${CONFIG.EMBLEM_DEPTH.toFixed(3)} * 0.5;
+                vShade = mix(0.40, 1.0, clamp(position.z / halfDepth * 0.5 + 0.5, 0.0, 1.0));
             }
 
             vec4 viewPosition = uView * uModel * vec4(position, 1.0);
@@ -164,6 +177,7 @@
         precision mediump float;
 
         in float vAlpha;
+        in float vShade;
 
         uniform vec3 uColor;
 
@@ -173,7 +187,7 @@
             vec2 offset = gl_PointCoord - 0.5;
             float falloff = exp(-dot(offset, offset) * 9.0);
             if (falloff < 0.01) discard;
-            outColor = vec4(uColor, falloff * vAlpha);
+            outColor = vec4(uColor * vShade, falloff * vAlpha);
         }
     `;
 
@@ -247,15 +261,43 @@
         ]);
     }
 
-    function rotationY(angle) {
-        const c = Math.cos(angle);
-        const s = Math.sin(angle);
-        return new Float32Array([
-            c, 0, -s, 0,
+    // Column-major 4x4 multiply
+    function multiply4(a, b) {
+        const out = new Float32Array(16);
+        for (let col = 0; col < 4; col++) {
+            for (let row = 0; row < 4; row++) {
+                out[col * 4 + row] =
+                    a[row] * b[col * 4] +
+                    a[4 + row] * b[col * 4 + 1] +
+                    a[8 + row] * b[col * 4 + 2] +
+                    a[12 + row] * b[col * 4 + 3];
+            }
+        }
+        return out;
+    }
+
+    // Yaw around Y with a pitch around X, plus an optional vertical lift. Both angles
+    // reach exactly zero when the emblem locks in, so it finishes square to camera.
+    function rotation3D(spinAngle, tiltAngle, lift) {
+        const cy = Math.cos(spinAngle), sy = Math.sin(spinAngle);
+        const cx = Math.cos(tiltAngle), sx = Math.sin(tiltAngle);
+
+        const yaw = new Float32Array([
+            cy, 0, -sy, 0,
             0, 1, 0, 0,
-            s, 0, c, 0,
+            sy, 0, cy, 0,
             0, 0, 0, 1
         ]);
+        const pitch = new Float32Array([
+            1, 0, 0, 0,
+            0, cx, sx, 0,
+            0, -sx, cx, 0,
+            0, 0, 0, 1
+        ]);
+
+        const matrix = multiply4(pitch, yaw);
+        matrix[13] = lift;
+        return matrix;
     }
 
     /*--- Emblem Sampling ---*/
@@ -324,7 +366,7 @@
                 points.push({
                     x: wx,
                     y: wy,
-                    z: (Math.random() - 0.5) * 0.22,
+                    z: (Math.random() - 0.5) * CONFIG.EMBLEM_DEPTH,
                     wait: Math.min(Math.max(radial * 0.82 + Math.random() * 0.12, 0.0), 1.0)
                 });
             }
@@ -371,9 +413,9 @@
         }
 
         for (let i = 0; i < CONFIG.DUST_PARTICLES; i++) {
-            data[offset++] = randomUnit() * 9.0;
-            data[offset++] = randomUnit() * 5.0;
-            data[offset++] = randomUnit() * 7.0 - 2.0;
+            data[offset++] = randomUnit() * CONFIG.DUST_WIDTH;
+            data[offset++] = randomUnit() * CONFIG.DUST_HEIGHT;
+            data[offset++] = randomUnit() * 9.0 - 3.0;
 
             // w doubles as the dust seed in the shader
             data[offset++] = 0.0;
@@ -437,10 +479,19 @@
     let wordmarkVisible = false;
     let pixelScale = 1;
 
+    // Adaptive resolution: the scene is fill-rate bound (one full-screen pass plus
+    // tens of thousands of additive points), so weak integrated GPUs need fewer
+    // pixels, not fewer particles. Starts sharp and steps down only if frames drag.
+    let qualityScale = 1;
+    let smoothedFrameMs = 16.7;
+    let lastFrameAt = 0;
+    let lastQualityShift = 0;
+
     function resize() {
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        canvas.width = Math.max(1, Math.round(window.innerWidth * dpr * SCALE));
-        canvas.height = Math.max(1, Math.round(window.innerHeight * dpr * SCALE));
+        const scale = dpr * SCALE * qualityScale;
+        canvas.width = Math.max(1, Math.round(window.innerWidth * scale));
+        canvas.height = Math.max(1, Math.round(window.innerHeight * scale));
         pixelScale = canvas.height / 1080;
         projection = perspective(CONFIG.FOV, canvas.width / canvas.height, 0.1, 80);
         gl.viewport(0, 0, canvas.width, canvas.height);
@@ -456,6 +507,26 @@
 
     function render(now) {
         if (!startedAt) startedAt = now;
+
+        // Auto quality: if frames are running long, render fewer pixels; if there is
+        // headroom again, step back up. Hysteresis + a cooldown stop it oscillating.
+        const frameMs = now - lastFrameAt;
+        lastFrameAt = now;
+        if (frameMs > 0 && frameMs < 400) {
+            smoothedFrameMs += (frameMs - smoothedFrameMs) * 0.08;
+        }
+        if (now - lastQualityShift > 1200) {
+            if (smoothedFrameMs > 22 && qualityScale > 0.55) {
+                qualityScale = Math.max(0.55, qualityScale - 0.1);
+                lastQualityShift = now;
+                resize();
+            } else if (smoothedFrameMs < 12.5 && qualityScale < 1) {
+                qualityScale = Math.min(1, qualityScale + 0.05);
+                lastQualityShift = now;
+                resize();
+            }
+        }
+
         const elapsed = (now - startedAt) * TIME_SCALE;
         const seconds = elapsed / 1000;
 
@@ -468,17 +539,21 @@
         const fadeIn = Math.min(elapsed / CONFIG.FADE_IN_MS, 1);
         const fade = Math.min(fadeIn, fadeOut);
 
-        // Camera: slow orbit with a dolly-in as the emblem forms
-        const orbit = 0.11 * Math.sin(seconds * 0.18);
+        // Camera: dead ahead on the emblem axis, symmetrical dolly only.
         const radius = 10.6 - 1.5 * easeOutCubic(progress);
-        const eye = [
-            Math.sin(orbit) * radius,
-            0.55 + 0.35 * Math.sin(seconds * 0.13),
-            Math.cos(orbit) * radius
-        ];
+        const eye = [0, 0.25, radius];
 
         const view = lookAt(eye, [0, 0, 0], [0, 1, 0]);
-        const model = rotationY(0.10 * Math.sin(seconds * 0.21));
+
+        // One full revolution spread across the whole construction: it eases up to speed,
+        // turns 360 as the particles fly in, and comes to rest exactly as the last of
+        // them locks into place.
+        const spinEase = progress * progress * (3.0 - 2.0 * progress);
+        const settle = 1 - spinEase;
+        const spin = settle * Math.PI * 2 * CONFIG.SPIN_TURNS;
+
+        const tilt = settle * 0.5 * Math.sin(seconds * 0.7);
+        const model = rotation3D(spin, tilt, CONFIG.EMBLEM_LIFT);
 
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0.0, 0.0, 0.0, 1.0);

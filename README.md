@@ -8,8 +8,6 @@
 
 <p align="center">
   <a href="https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page"><b>▶ Live demo</b></a>
-  &nbsp;·&nbsp;
-  <a href="https://site-03c3b4999edb4f28b4919b715e0bdeb0.freebuff.page/preview-4k.mp4">⬇ 4K master — 3840×2160, 16:9</a>
 </p>
 
 A particle loading animation: thousands of points drift in from a sphere, assemble the
@@ -21,22 +19,13 @@ Written by **Jackrabbit72380**. Single-file WebGL2 engine, no libraries, no buil
 
 ## Preview
 
-The animation above is a looping capture of the real engine — one full cycle: assembled hold,
-fade out, rebuild from the particle shell, settle again. It starts on the assembled emblem so
-the thumbnail opens on the finished mark.
-
-| Property | Value |
-| :--- | :--- |
-| Master | `preview-4k.mp4` — **3840 × 2160**, 16:9, H.264, 5 fps, 14.4 s, 5.8 MB |
-| Inline loop | `preview.webp` — 640 × 360, 16:9, animated WebP, 72 frames, 544 KB |
-| Poster | `poster.jpg` — 1920 × 1080 still, for social previews |
-| Capture | A real **3840 × 2160 viewport at 1× DPR**, not a 1080p layout upscaled. The wordmark resolves to 760 px, 19.8% of frame width — the genuine 4K composition. |
+The animation above is a looping capture of the real engine, 16:9 — one full cycle: assembled
+hold, fade out, rebuild from the particle shell, settle again. It starts on the assembled
+emblem so the thumbnail opens on the finished mark.
 
 Frames were recorded against a frozen animation clock: `requestAnimationFrame` is replaced
 with a manual stepper and advanced exactly 200 ms per frame, in one continuous session, so
-the timeline is exact instead of drifting with screenshot latency. The inline loop is 640 px
-wide on purpose — a full-cycle animated capture of a particle field is roughly incompressible,
-and a heavy one makes the README page itself chew CPU while it plays.
+the timeline is exact instead of drifting with screenshot latency.
 
 <br/>
 

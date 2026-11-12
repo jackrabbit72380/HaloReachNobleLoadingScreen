@@ -27,10 +27,10 @@ the thumbnail opens on the finished mark.
 
 | Property | Value |
 | :--- | :--- |
-| Master | `preview-4k.mp4` — **3840 × 2160**, 16:9, H.264, 5 fps, 14.4 s, 5.9 MB |
-| Inline loop | `preview.webp` — 640 × 360, 16:9, animated WebP, 72 frames, 550 KB |
-| Poster | `poster.jpg` — 1280 × 720 still, for social previews |
-| Capture | 1920 × 1080 viewport at 2× device pixel ratio, so the canvas renders at a true 3840 × 2160 |
+| Master | `preview-4k.mp4` — **3840 × 2160**, 16:9, H.264, 5 fps, 14.4 s, 5.8 MB |
+| Inline loop | `preview.webp` — 640 × 360, 16:9, animated WebP, 72 frames, 544 KB |
+| Poster | `poster.jpg` — 1920 × 1080 still, for social previews |
+| Capture | A real **3840 × 2160 viewport at 1× DPR**, not a 1080p layout upscaled. The wordmark resolves to 760 px, 19.8% of frame width — the genuine 4K composition. |
 
 Frames were recorded against a frozen animation clock: `requestAnimationFrame` is replaced
 with a manual stepper and advanced exactly 200 ms per frame, in one continuous session, so

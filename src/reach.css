@@ -24,8 +24,8 @@ body {
 #wordmark {
     position: absolute;
     left: 50%;
-    bottom: 12%;
-    width: min(46vw, 620px);
+    bottom: 6%;
+    width: min(50vw, 64vh, 760px);
     opacity: 0;
     transform: translate(-50%, 10px);
     transition: opacity 900ms ease, transform 900ms ease;

@@ -200,6 +200,7 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 
 | Section | What it does |
 | :--- | :--- |
+| **Reset** | The wide button at the top of the panel, above every section — the first thing in the list. |
 | **Target** | Ball, cube, torus, atom, helix, pyramid, star, spear, imported mesh — all 3D — plus the glyph or any image, load, drop or paste, then **Rebuild**. |
 | **Title** | The caption under the shape and its size. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
@@ -212,11 +213,12 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 | **Audio** | Microphone, system audio or a local audio file. Level drives size and brightness. |
 | **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it, and the model download — captured inside the particle window. |
 
-**Reset** in the top-right puts every setting back to the shipped defaults — in the engine and
-in the panel — and starts the assembly over: ball target, the shipped caption, 0.064 turns/s on
-the Y axis, settle angle 0°, tilt 0°, pivot 0, 0, 0, no pan, rebuild loop on (so Infinite
-rotation off), tint `#a1d6ff`, show mode off, and the accumulated turn back to zero so the pose is
-the fresh-page one rather than that angle plus whatever it had turned.
+**Reset** is the wide button at the top of the panel, above Target, and it puts every setting back
+to the shipped defaults — in the engine and in the panel — and starts the assembly over: ball
+target, the shipped caption, 0.064 turns/s on the Y axis, settle angle 0°, tilt 0°, pivot 0, 0, 0,
+no pan, rebuild loop on (so Infinite rotation off), tint `#a1d6ff`, show mode off, and the
+accumulated turn back to zero so the pose is the fresh-page one rather than that angle plus
+whatever it had turned.
 
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in

@@ -2,9 +2,9 @@
  *  Jackrabbit72380
  *  2026
  *
- *  Three ways to fill the caption from what you just loaded: the track that is playing, the
- *  picture, or the model. Each one remembers the last file chosen for it — by picker, drop or
- *  paste — and the buttons stay dim until there is a name to use.
+ *  Three ways to fill the caption from what you loaded: Track, Image, Model. They sit in one row
+ *  under the caption field, and each remembers the last file chosen for it — picker, drop or paste
+ *  — so the option is still there after a reload.
  */
 
 (() => {
@@ -19,7 +19,6 @@
   const input = title.querySelector('input[type="text"]');
   if (!input) return;
 
-  // The engine lives in this window, or in the particle window this page opened.
   function engine() {
     const offered = window.HPA_PLAYER;
     if (offered && offered !== window) {
@@ -32,10 +31,27 @@
     return window.HPA || null;
   }
 
-  // A file name without its extension: "midnight-drive.mp3" reads better as "midnight-drive".
   const tidy = (name) => String(name || '').replace(/\.[^.]+$/, '').trim();
 
+  /*--- What was loaded, kept between visits ---*/
+
+  const STORE = 'hpa.captionNames';
   const names = { track: '', image: '', model: '' };
+
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(STORE) || '{}');
+    for (const key of Object.keys(names)) if (typeof saved[key] === 'string') names[key] = saved[key];
+  } catch (error) {
+    /* nothing saved yet, or storage is off */
+  }
+
+  function save() {
+    try {
+      window.localStorage.setItem(STORE, JSON.stringify(names));
+    } catch (error) {
+      /* private mode: the names just will not persist */
+    }
+  }
 
   function classify(file) {
     if (!file) return '';
@@ -50,27 +66,29 @@
     const name = tidy(file && file.name);
     if (!kind || !name) return;
     names[kind] = name;
+    save();
     refresh();
   }
 
-  /*--- The buttons ---*/
+  /*--- The three buttons, one row ---*/
 
   const style = document.createElement('style');
-  style.textContent = '.name-row{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}' +
-    '.name-row button{flex:0 0 auto;padding:5px 9px;font-size:11px;letter-spacing:.04em}' +
-    '.name-row button:disabled{opacity:.4;cursor:default}';
+  style.textContent = [
+    '.name-row{display:flex;flex-wrap:nowrap;gap:6px;margin:6px 0 4px}',
+    '.name-row button{flex:1 1 0;min-width:0;padding:6px 4px;font-size:11px;letter-spacing:.05em;',
+    'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.name-row button:disabled{opacity:.4;cursor:default}'
+  ].join('');
   document.head.appendChild(style);
 
   const row = document.createElement('div');
   row.className = 'name-row';
 
   const made = {};
-  for (const [kind, label] of [['track', 'Use track name'], ['image', 'Use image name'], ['model', 'Use model name']]) {
+  for (const [kind, label] of [['track', 'Track'], ['image', 'Image'], ['model', 'Model']]) {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = label;
-    button.disabled = true;
-    button.title = 'Fills the caption with the name of the last file you loaded';
     button.addEventListener('click', () => {
       if (!names[kind]) return;
       input.value = names[kind];
@@ -89,41 +107,37 @@
   function refresh() {
     for (const [kind, button] of Object.entries(made)) {
       button.disabled = !names[kind];
-      button.textContent = names[kind]
-        ? `${kind === 'track' ? 'Use track' : kind === 'image' ? 'Use image' : 'Use model'}: ${names[kind]}`
-        : kind === 'track' ? 'Use track name' : kind === 'image' ? 'Use image name' : 'Use model name';
+      button.title = names[kind]
+        ? `Use the ${kind} name: ${names[kind]}`
+        : `No ${kind} loaded yet`;
     }
   }
 
   /*--- Watching what gets loaded ---*/
 
-  // One listener for every file input, catching the event on its way down: the panel's own
-  // inputs are built in another file, and a picker may be added later, so nothing here depends on
-  // holding a reference to a particular element.
   document.addEventListener('change', (event) => {
-    const input = event.target;
-    if (!input || input.type !== 'file') return;
-    const file = input.files && input.files[0];
+    const field = event.target;
+    if (!field || field.type !== 'file') return;
+    const file = field.files && field.files[0];
     if (!file) return;
 
-    if (input.id === 'file') return remember('image', file);
-    const accept = String(input.accept || '');
+    if (field.id === 'file') return remember('image', file);
+    const accept = String(field.accept || '');
     if (/audio/i.test(accept)) return remember('track', file);
     if (/\.obj|\.ply/i.test(accept)) return remember('model', file);
     return remember(classify(file), file);
   }, true);
 
-  // Dropping and pasting skip the inputs, so the files are read here instead.
-  const pick = (event) => {
+  window.addEventListener('drop', (event) => {
     const files = event.dataTransfer && event.dataTransfer.files;
     if (!files) return;
     for (const file of files) remember(classify(file), file);
-  };
-  window.addEventListener('drop', pick, true);
+  }, true);
+
   window.addEventListener('paste', (event) => {
-    const items = event.clipboardData && event.clipboardData.files;
-    if (!items) return;
-    for (const file of items) remember(classify(file), file);
+    const files = event.clipboardData && event.clipboardData.files;
+    if (!files) return;
+    for (const file of files) remember(classify(file), file);
   }, true);
 
   refresh();

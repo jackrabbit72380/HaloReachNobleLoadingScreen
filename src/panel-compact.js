@@ -2,10 +2,10 @@
  *  Jackrabbit72380
  *  2026
  *
- *  Keeps the control panel readable: every long note becomes a small "i" pill that opens when
- *  it is clicked, instead of a paragraph that takes three lines of every section. It also takes
- *  the Equalizer ring button off the Visualizer section, because the same target already sits in
- *  the Target list as Equalizer (audio bars) — one way in is enough.
+ *  Keeps the control panel readable: every long note becomes a small "i" pill in the top right of
+ *  its section, level with the heading, that opens the text when it is clicked. No paragraph, and
+ *  no extra row. It also takes the Equalizer ring button off the Visualizer section, because the
+ *  same target already sits in the Target list as Equalizer (audio bars) — one way in is enough.
  */
 
 (() => {
@@ -16,10 +16,12 @@
 
   const style = document.createElement('style');
   style.textContent = [
-    '.info-pill{width:18px;height:18px;margin:2px 0 6px;padding:0;border-radius:50%;',
-    'border:1px solid rgba(143,216,255,.45);background:transparent;color:inherit;',
-    'font:600 11px/1 system-ui,sans-serif;cursor:pointer;opacity:.7;flex:0 0 auto}',
+    '.section{position:relative}',
+    '.info-pill{position:absolute;top:9px;right:2px;width:18px;height:18px;margin:0;padding:0;',
+    'border-radius:50%;border:1px solid rgba(143,216,255,.45);background:transparent;color:inherit;',
+    'font:600 11px/1 system-ui,sans-serif;cursor:pointer;opacity:.7;z-index:2}',
     '.info-pill:hover,.info-pill.open{opacity:1;border-color:#8fd8ff}',
+    '.section h2{padding-right:22px}',
     '.note[hidden]{display:none!important}',
     '.note{margin-top:2px}'
   ].join('');
@@ -44,7 +46,7 @@
     }
   }
 
-  /*--- Notes become pills ---*/
+  /*--- Notes become pills, in the heading ---*/
 
   for (const note of sections.querySelectorAll('.note')) {
     if (note.dataset.pill) continue;
@@ -65,6 +67,8 @@
       pill.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 
-    note.before(pill);
+    const section = note.closest('.section');
+    if (section) section.appendChild(pill);
+    else note.before(pill);
   }
 })();

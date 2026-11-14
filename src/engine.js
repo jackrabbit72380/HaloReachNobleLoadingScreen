@@ -47,6 +47,12 @@
         FADE_IN_MS: 900,
         MASK_HEIGHT: 4.6,
         MASK_LIFT: 0.0,
+        // The point the turn goes around, in world units, measured from the middle of the target.
+        // Zero is the target's own centre, which is where every built-in shape sits; an imported
+        // model is centred on its bounding box, so its "base" is usually round -2 on Y.
+        PIVOT_X: 0.0,
+        PIVOT_Y: 0.0,
+        PIVOT_Z: 0.0,
         SPIN_TURNS: 1.0,
         MASK_DEPTH: 0.9,
         DUST_WIDTH: 12.0,
@@ -316,7 +322,10 @@
         return out;
     }
 
-    function rotation3D(spinAngle, tiltAngle, lift) {
+    // The turn happens around PIVOT_X/Y/Z instead of the world origin: move the pivot to the
+    // origin, rotate, then put it back — M = T(P) · R · T(-P). With the pivot at 0 this is the
+    // plain rotation it always was, with MASK_LIFT as the only translation.
+    function rotation3D(spinAngle, tiltAngle, lift, pivot) {
         const cy = Math.cos(spinAngle), sy = Math.sin(spinAngle);
         const cx = Math.cos(tiltAngle), sx = Math.sin(tiltAngle);
 
@@ -334,7 +343,15 @@
         ]);
 
         const matrix = multiply4(pitch, yaw);
-        matrix[13] = lift;
+
+        const px = pivot[0];
+        const py = pivot[1] + lift;
+        const pz = pivot[2];
+
+        matrix[12] = px - (matrix[0] * px + matrix[4] * py + matrix[8] * pz);
+        matrix[13] = py - (matrix[1] * px + matrix[5] * py + matrix[9] * pz);
+        matrix[14] = pz - (matrix[2] * px + matrix[6] * py + matrix[10] * pz);
+
         return matrix;
     }
 
@@ -1140,7 +1157,12 @@
         // an optional extra so a head-on shape can stay dead level.
         const sway = (Number(CONFIG.SWAY) || 0) * settle * 0.5 * Math.sin(seconds * 0.7);
         const tilt = eqMode ? 0 : (Number(CONFIG.TILT) || 0) * Math.PI / 180 + sway;
-        const model = rotation3D(spin, tilt, CONFIG.MASK_LIFT);
+        // The pivot is where the target turns from, so an imported model can spin on its base.
+        const model = rotation3D(spin, tilt, CONFIG.MASK_LIFT, [
+            Number(CONFIG.PIVOT_X) || 0,
+            Number(CONFIG.PIVOT_Y) || 0,
+            Number(CONFIG.PIVOT_Z) || 0
+        ]);
 
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0.0, 0.0, 0.0, 1.0);

@@ -22,14 +22,19 @@
     /*--- Configuration ---*/
 
     const CONFIG = {
-        MASK_SRC: 'res/hpa-glyph.svg',
+        MASK_SRC: 'spear',           // 'spear' or any image URL / data URL
+        MODE: 'shape',               // 'shape' | 'equalizer'
+        VIEW: 'orbit',               // 'orbit' | 'inside'
+        ZOOM: 1.0,
+        ROTATE_SPEED: 0.40,          // radians per second once the shape is assembled
+        EQ_HEIGHT: 2.2,              // world height a full-scale spectrum band reaches
         SAMPLE_WIDTH: 260,
         DUST_PARTICLES: 6000,
         POINT_SIZE: 30.0,
         COLOR: [0.63, 0.84, 1.0],
         FOV: 42.0,
         ASSEMBLY_MS: 7000,
-        HOLD_MS: 4800,
+        HOLD_MS: 12000,
         FADE_MS: 1200,
         FADE_IN_MS: 900,
         MASK_HEIGHT: 4.6,
@@ -126,6 +131,7 @@
         layout(location = 1) in vec4  aTarget;
         layout(location = 2) in vec3  aSwerve;
         layout(location = 3) in float aKind;
+        layout(location = 4) in vec2  aEq;
 
         uniform mat4  uProjection;
         uniform mat4  uView;
@@ -137,6 +143,8 @@
         uniform float uFade;
         uniform float uHalfDepth;
         uniform float uAudio;
+        uniform float uSpectrum[64];
+        uniform float uEqHeight;
 
         out float vAlpha;
         out float vShade;
@@ -166,6 +174,13 @@
                     0.0
                 ) * 0.0035 * t;
 
+                // Equalizer columns: every point sits at its own slot up a bar, and the
+                // bar rises with its own spectrum band, so the disc of bars dances in 3D.
+                if (aEq.y > 0.0) {
+                    float level = uSpectrum[int(clamp(aEq.x, 0.0, 63.0))];
+                    position.y += aEq.y * level * uEqHeight;
+                }
+
                 vAlpha = uFade * smoothstep(0.02, 0.28, t);
 
                 float halfDepth = max(uHalfDepth, 0.001);
@@ -175,10 +190,10 @@
             vec4 viewPosition = uView * uModel * vec4(position, 1.0);
             gl_Position = uProjection * viewPosition;
 
-            float distance = max(-viewPosition.z, 0.15);
+            float distance = max(-viewPosition.z, 0.42);
             float kindScale = aKind > 0.5 ? 0.55 : 1.0;
             float pulse = 1.0 + uAudio * 0.85;
-            gl_PointSize = uPointSize * uPixelScale * kindScale * pulse / distance;
+            gl_PointSize = min(uPointSize * uPixelScale * kindScale * pulse / distance, 120.0);
         }
     `;
 
@@ -328,6 +343,8 @@
     }
 
     async function sampleMask(source) {
+        if (source === 'spear') return spearPoints();
+
         const image = await loadImage(source);
         const width = Math.max(16, Math.round(CONFIG.SAMPLE_WIDTH));
         const height = Math.max(2, Math.round(width * (image.height / image.width)));
@@ -384,12 +401,121 @@
         return points;
     }
 
+    /*--- Shapes ---*/
+
+    // A real 3D spear, sampled on its surfaces: pommel, ferrule, wrapped shaft, socket
+    // collar and a lens-sectioned blade. It lies along X so the Y spin shows every side.
+    function spearPoints() {
+        const points = [];
+        const TIP = CONFIG.MASK_HEIGHT / 2;
+        const BUTT = -TIP;
+
+        const clamp01 = (value) => Math.max(0, Math.min(1, value));
+        const smooth = (value) => value * value * (3 - 2 * value);
+        const add = (x, y, z, wait) => points.push({ x, y, z, wait: clamp01(wait) });
+        const waitFor = (x) => clamp01((Math.abs(x) / TIP) * 0.80 + Math.random() * 0.15);
+
+        // Shaft radius along X: thin at the butt, a grip swell, tapering into the collar.
+        const shaftRadius = (x) => {
+            const grip = Math.exp(-Math.pow((x + 0.55) / 0.85, 2)) * 0.020;
+            const taper = 0.012 * clamp01((x - 1.05) / 1.25);
+            return 0.070 + grip - taper;
+        };
+
+        // Blade: a leaf, wide in Y and thin in Z, with a spine ridge near the middle.
+        const bladeWidth = (x) => {
+            const t = clamp01((x - 1.22) / (TIP - 1.22));
+            return Math.sin(Math.pow(t, 0.62) * Math.PI) * 0.260 * (1 - t * 0.15);
+        };
+        const bladeThickness = (x) => 0.020 + bladeWidth(x) * 0.14;
+
+        // Pommel and ferrule.
+        for (let i = 0; i < 900; i++) {
+            const x = BUTT + Math.random() * 0.52;
+            const radius = 0.020 + smooth((x - BUTT) / 0.52) * 0.090;
+            const angle = Math.random() * Math.PI * 2;
+            add(x, Math.cos(angle) * radius, Math.sin(angle) * radius, 0.85 + Math.random() * 0.10);
+        }
+
+        // Shaft.
+        for (let i = 0; i < 5200; i++) {
+            const x = -1.78 + Math.random() * 2.96;
+            const angle = Math.random() * Math.PI * 2;
+            const radius = shaftRadius(x);
+            add(x, Math.cos(angle) * radius, Math.sin(angle) * radius, waitFor(x));
+        }
+
+        // Socket collar where the blade meets the shaft.
+        for (let i = 0; i < 700; i++) {
+            const x = 1.05 + Math.random() * 0.27;
+            const radius = 0.070 + Math.sin(((x - 1.05) / 0.27) * Math.PI) * 0.070;
+            const angle = Math.random() * Math.PI * 2;
+            add(x, Math.cos(angle) * radius, Math.sin(angle) * radius, 0.55 + Math.random() * 0.20);
+        }
+
+        // Blade.
+        for (let i = 0; i < 5200; i++) {
+            const x = 1.22 + Math.random() * (TIP - 1.22);
+            const width = bladeWidth(x);
+            if (width < 0.0005) continue;
+            const thickness = bladeThickness(x);
+            const angle = Math.random() * Math.PI * 2;
+            add(x, Math.cos(angle) * width, Math.sin(angle) * thickness, waitFor(x));
+        }
+
+        return points;
+    }
+
+    // A flat disc of spectrum columns. The plane rotates with the model and every column
+    // rises with its own frequency band, so it reads as a circular graphic equalizer.
+    function equalizerPoints() {
+        const points = [];
+        const BANDS = 64;
+        const inner = 1.25;
+        const outer = 2.35;
+
+        for (let band = 0; band < BANDS; band++) {
+            const angle = (band / BANDS) * Math.PI * 2;
+            const cx = Math.cos(angle);
+            const cz = Math.sin(angle);
+            for (let i = 0; i < 340; i++) {
+                const radial = inner + Math.random() * (outer - inner);
+                points.push({
+                    x: cx * radial,
+                    y: 0,
+                    z: cz * radial,
+                    wait: Math.random() * 0.6,
+                    band,
+                    height: 0.08 + Math.random() * 0.92
+                });
+            }
+        }
+
+        // The plane the columns stand on.
+        for (let i = 0; i < 3000; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radial = Math.sqrt(Math.random()) * outer;
+            points.push({
+                x: Math.cos(angle) * radial,
+                y: 0,
+                z: Math.sin(angle) * radial,
+                wait: Math.random() * 0.9,
+                band: 0,
+                height: 0
+            });
+        }
+
+        return points;
+    }
+
     /*--- Geometry ---*/
 
     function buildBuffer(maskPoints) {
-        const dust = Math.max(0, Math.round(CONFIG.DUST_PARTICLES));
+        // The equalizer needs a clean stage, so the dust behind it is thinned right out.
+        const dustScale = CONFIG.MODE === 'equalizer' ? 0.18 : 1;
+        const dust = Math.max(0, Math.round(CONFIG.DUST_PARTICLES * dustScale));
         const total = maskPoints.length + dust;
-        const stride = 11;
+        const stride = 13;
         const data = new Float32Array(total * stride);
         let offset = 0;
 
@@ -418,6 +544,8 @@
             data[offset++] = (sz + point.z) * 0.5 + randomUnit() * 0.85;
 
             data[offset++] = 0.0;
+            data[offset++] = point.band || 0;
+            data[offset++] = point.height || 0;
         }
 
         for (let i = 0; i < dust; i++) {
@@ -435,6 +563,9 @@
             data[offset++] = 0.0;
 
             data[offset++] = 1.0;
+
+            data[offset++] = 0.0;
+            data[offset++] = 0.0;
         }
 
         const vao = gl.createVertexArray();
@@ -453,6 +584,8 @@
         gl.vertexAttribPointer(2, 3, gl.FLOAT, false, bytes, 28);
         gl.enableVertexAttribArray(3);
         gl.vertexAttribPointer(3, 1, gl.FLOAT, false, bytes, 40);
+        gl.enableVertexAttribArray(4);
+        gl.vertexAttribPointer(4, 2, gl.FLOAT, false, bytes, 44);
 
         gl.bindVertexArray(null);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -477,7 +610,7 @@
     const particleUniforms = uniformsOf(particleProgram, [
         'uProjection', 'uView', 'uModel', 'uProgress', 'uTime',
         'uPointSize', 'uPixelScale', 'uFade', 'uColor', 'uColor2',
-        'uGlow', 'uChroma', 'uHalfDepth', 'uAudio'
+        'uGlow', 'uChroma', 'uHalfDepth', 'uAudio', 'uSpectrum', 'uEqHeight'
     ]);
 
     const backgroundVao = gl.createVertexArray();
@@ -490,6 +623,7 @@
     gl.bindVertexArray(null);
 
     let scene = null;
+    let spectrum = new Float32Array(64);
     let projection = null;
     let startedAt = 0;
     let captionVisible = false;
@@ -509,7 +643,7 @@
         canvas.width = Math.max(1, Math.round(window.innerWidth * dpr * SCALE));
         canvas.height = Math.max(1, Math.round(window.innerHeight * dpr * SCALE));
         pixelScale = canvas.height / 1080;
-        projection = perspective(CONFIG.FOV, canvas.width / canvas.height, 0.1, 80);
+        projection = perspective(CONFIG.FOV, canvas.width / canvas.height, 0.02, 80);
         gl.viewport(0, 0, canvas.width, canvas.height);
     }
 
@@ -545,21 +679,33 @@
         const fadeIn = Math.min(elapsed / Math.max(1, CONFIG.FADE_IN_MS), 1);
         const fade = Math.min(fadeIn, fadeOut);
 
-        const radius = 10.6 - 1.5 * easeOutCubic(progress);
+        const zoom = Math.max(0.35, Math.min(6, Number(CONFIG.ZOOM) || 1));
+        const inside = CONFIG.VIEW === 'inside';
+        const distance = (inside ? 2.0 : 10.6 - 1.5 * easeOutCubic(progress)) / zoom;
+
+        const eqMode = CONFIG.MODE === 'equalizer';
         const shake = CONFIG.SHAKE * (1 - progress * 0.85);
-        const eye = [
-            Math.sin(seconds * 37.0) * shake,
-            0.25 + Math.cos(seconds * 41.0) * shake,
-            radius
-        ];
+        // The equalizer is a flat disc, so it is read from above instead of edge-on.
+        const eyeHeight = eqMode ? 3.4 : 0.25;
+        const eye = inside
+            ? [
+                Math.sin(seconds * 0.21) * 0.30 + Math.sin(seconds * 37.0) * shake * 0.15,
+                0.10 + Math.cos(seconds * 0.17) * 0.18,
+                distance
+            ]
+            : [
+                Math.sin(seconds * 37.0) * shake,
+                eyeHeight + Math.cos(seconds * 41.0) * shake,
+                distance
+            ];
 
         const view = lookAt(eye, [0, 0, 0], [0, 1, 0]);
 
         const spinEase = progress * progress * (3.0 - 2.0 * progress);
         const settle = 1 - spinEase;
-        const spin = settle * Math.PI * 2 * CONFIG.SPIN_TURNS;
+        const spin = settle * Math.PI * 2 * CONFIG.SPIN_TURNS + seconds * CONFIG.ROTATE_SPEED;
 
-        const tilt = settle * 0.5 * Math.sin(seconds * 0.7);
+        const tilt = eqMode ? 0 : 0.42 + settle * 0.5 * Math.sin(seconds * 0.7);
         const model = rotation3D(spin, tilt, CONFIG.MASK_LIFT);
 
         gl.viewport(0, 0, canvas.width, canvas.height);
@@ -587,13 +733,15 @@
             gl.uniformMatrix4fv(particleUniforms.uModel, false, model);
             gl.uniform1f(particleUniforms.uProgress, progress);
             gl.uniform1f(particleUniforms.uTime, seconds);
-            gl.uniform1f(particleUniforms.uPointSize, CONFIG.POINT_SIZE);
+            gl.uniform1f(particleUniforms.uPointSize, CONFIG.POINT_SIZE * (inside ? 0.5 : 1) * (eqMode ? 0.75 : 1));
             gl.uniform1f(particleUniforms.uPixelScale, pixelScale);
             gl.uniform1f(particleUniforms.uFade, fade);
             gl.uniform1f(particleUniforms.uHalfDepth, CONFIG.MASK_DEPTH * 0.5);
             gl.uniform1f(particleUniforms.uGlow, CONFIG.GLOW);
             gl.uniform1f(particleUniforms.uChroma, CONFIG.CHROMA);
             gl.uniform1f(particleUniforms.uAudio, CONFIG.AUDIO);
+            gl.uniform1fv(particleUniforms.uSpectrum, spectrum);
+            gl.uniform1f(particleUniforms.uEqHeight, CONFIG.EQ_HEIGHT);
             gl.uniform3fv(particleUniforms.uColor, CONFIG.COLOR);
             gl.uniform3fv(particleUniforms.uColor2, accent);
 
@@ -617,7 +765,9 @@
 
     function rebuild(restart = true) {
         rebuilding = (rebuilding || Promise.resolve()).then(async () => {
-            const points = await sampleMask(CONFIG.MASK_SRC);
+            const points = CONFIG.MODE === 'equalizer'
+                ? equalizerPoints()
+                : await sampleMask(CONFIG.MASK_SRC);
             const next = buildBuffer(points);
             disposeScene(scene);
             scene = next;
@@ -681,6 +831,7 @@
         set(patch = {}) {
             const needsRebuild =
                 'MASK_SRC' in patch ||
+                'MODE' in patch ||
                 'SAMPLE_WIDTH' in patch ||
                 'DUST_PARTICLES' in patch ||
                 'MASK_DEPTH' in patch;
@@ -693,6 +844,13 @@
         },
         setAudio(level) {
             CONFIG.AUDIO = Math.max(0, Math.min(1, Number(level) || 0));
+        },
+        setSpectrum(values) {
+            const source = values && values.length ? values : [];
+            for (let i = 0; i < spectrum.length; i++) {
+                const value = Number(source[i]) || 0;
+                spectrum[i] = Math.max(0, Math.min(1, value));
+            }
         },
         capture,
         record,
@@ -764,6 +922,13 @@
     applyCaption();
     window.addEventListener('resize', resize);
     resize();
+
+    // The particle window is its own page, so zooming here is what people reach for.
+    canvas.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        const next = (Number(CONFIG.ZOOM) || 1) * Math.exp(-event.deltaY * 0.0012);
+        CONFIG.ZOOM = Math.max(0.35, Math.min(6, next));
+    }, { passive: false });
 
     ready.then(() => {
         requestAnimationFrame(render);

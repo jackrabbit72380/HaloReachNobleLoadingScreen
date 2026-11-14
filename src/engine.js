@@ -2,20 +2,12 @@
  *  Jackrabbit72380
  *  2026
  *
- *  A GPU particle animation. Thousands of points fly in from a sphere and assemble
- *  whatever image they are pointed at, hold, fade, and rebuild. The controls live in the
- *  docked panel; this file only renders and exposes window.HPA.
+ *  A GPU particle animation: points fly in from a sphere, assemble whatever target they are
+ *  pointed at, hold, fade and rebuild. Dependency free — WebGL2, one buffer, two programs.
+ *  Every target is built here: ball, cube, torus, atom, helix, pyramid, star, spear, and the
+ *  two audio planes — the equalizer wheel and the grid.
  *
- *  Deliberately dependency free: WebGL2, one buffer, two programs, no build step.
- *
- *  Every target shape is built here: ball, cube, torus, atom, helix, pyramid, star, spear.
- *
- *  URL flags:
- *    ?4k ?2k ?sd    resolution scale
- *    ?halfspeed     half animation speed
- *    ?quarterspeed  quarter animation speed
- *    ?nocaption     never show the caption overlay
- *    ?nocontrols    ignore postMessage (standalone playback)
+ *  URL flags: ?4k ?2k ?sd  ?halfspeed  ?quarterspeed  ?nocaption  ?nocontrols
  */
 
 (() => {
@@ -25,7 +17,7 @@
 
     const CONFIG = {
         MASK_SRC: 'ball',            // a shape name, 'mesh', or an image URL / data URL
-        MODE: 'shape',               // 'shape' | 'equalizer'
+        MODE: 'shape',               // 'shape' | 'equalizer' | 'grid'
         VIEW: 'orbit',               // 'orbit' | 'inside'
         ZOOM: 1.0,
         TILT: 0,                     // degrees the model is pitched; 0 looks at it head-on
@@ -328,8 +320,7 @@
         return out;
     }
 
-    // A turn about one of the three axes: y is the turntable, x tumbles the object over,
-    // z rolls it. Default y is the plain yaw this always was.
+    // A turn about one axis: y is the turntable, x tumbles, z rolls.
     function turnMatrix(angle, axis) {
         const c = Math.cos(angle), s = Math.sin(angle);
 
@@ -357,9 +348,8 @@
         ]);
     }
 
-    // The turn happens around the pivot, not the world origin: M = T(P) · R · T(-P). With the
-    // pivot at 0 this is the plain rotation it always was, with MASK_LIFT as the only
-    // translation. TILT stays a pitch about X whichever axis is turning.
+    // M = T(P) · R · T(-P): the turn goes around the pivot. TILT stays a pitch about X
+    // whichever axis is turning.
     function rotation3D(spinAngle, tiltAngle, lift, pivot, axis) {
         const cx = Math.cos(tiltAngle), sx = Math.sin(tiltAngle);
 
@@ -385,8 +375,7 @@
 
     /*--- Mask Sampling ---*/
 
-    // Shape generators live here by name. Every one is in this file, below; HPA.shapes is the
-    // same table, so a shape can also be added from the console if you want to experiment.
+    // Shape generators by name, all in this file; HPA.shapes is this same table.
     const SHAPES = {};
 
     function loadImage(source) {
@@ -475,8 +464,7 @@
         ];
     }
 
-    // A ball: a sphere sampled on its surface, part of it on a latitude/longitude grid so
-    // it reads as a clean globe instead of a fuzzy cloud.
+    // A ball: a sphere sampled on its surface, partly on a lat/long grid so it reads as a globe.
     function ballPoints() {
         const points = [];
         const radius = CONFIG.MASK_HEIGHT * 0.45;
@@ -521,8 +509,7 @@
         return points;
     }
 
-    // A real 3D cube: six flat faces, with the twelve edges and eight corners built up denser,
-    // so it holds its shape from every angle instead of only facing the camera.
+    // A real 3D cube: six flat faces, edges and corners denser, so it holds up from any angle.
     function cubePoints() {
         const points = [];
         const half = CONFIG.MASK_HEIGHT * 0.45;
@@ -580,8 +567,7 @@
         return points;
     }
 
-    // A ring with a solid tube. Surface points are accepted by (R + r cos v) / (R + r), which
-    // is what spreads them evenly instead of bunching them on the inner rim.
+    // A ring with a solid tube; points are accepted by (R + r cos v) / (R + r) to spread evenly.
     function torusPoints() {
         const points = [];
         const R = 1.52;
@@ -626,7 +612,7 @@
         return points;
     }
 
-    // A nucleus with three elliptical orbits in different planes and an electron on each.
+    // A nucleus with three orbits stood up round X by default, and an electron on each.
     function atomPoints() {
         const points = [];
         const reach = 1.9;
@@ -652,21 +638,25 @@
 
         const A = 1.85;
         const B = 0.62;
+        // The orbits stand up out of the flat plane by default — a quarter turn about X — and
+        // fan either side of vertical, so the atom reads as an atom from the front.
+        const UPRIGHT = Math.PI / 2;
 
         for (let orbit = 0; orbit < 3; orbit++) {
-            const turn = (orbit / 3) * Math.PI;
-            const cos = Math.cos(turn);
-            const sin = Math.sin(turn);
+            const lean = UPRIGHT + (orbit - 1) * 0.62;
+            const sinLean = Math.sin(lean);
+            const cosLean = Math.cos(lean);
 
+            // A point on this orbit: an ellipse half-height B, stood up round X by `lean`.
             const at = (t) => {
-                const flatX = Math.cos(t) * A;
-                const flatZ = Math.sin(t) * B;
-                return [flatX * cos - flatZ * sin, flatX * sin + flatZ * cos];
+                const across = Math.cos(t) * A;
+                const along = Math.sin(t) * B;
+                return [across, -along * sinLean, along * cosLean];
             };
 
             for (let i = 0; i < 2400; i++) {
                 const p = at(Math.random() * Math.PI * 2);
-                add(p[0], 0, p[1]);
+                add(p[0], p[1], p[2]);
             }
 
             const centre = orbit * 2.2 + 0.6;
@@ -674,8 +664,8 @@
                 const p = at(centre + (Math.random() - 0.5) * 0.06);
                 add(
                     p[0] + (Math.random() - 0.5) * 0.07,
-                    (Math.random() - 0.5) * 0.07,
                     p[1] + (Math.random() - 0.5) * 0.07,
+                    p[2] + (Math.random() - 0.5) * 0.07,
                     0.55 + Math.random() * 0.25
                 );
             }
@@ -684,8 +674,7 @@
         return points;
     }
 
-    // Two strands wound round a shared axis, with rungs between them. It lies along X, like the
-    // spear, so the endless Y turn shows the wind from every side.
+    // Two strands wound round a shared axis, with rungs between them; it lies along X.
     function helixPoints() {
         const points = [];
         const LENGTH = 3.9;
@@ -722,8 +711,7 @@
         return points;
     }
 
-    // A square pyramid: four triangular sides and a base, with the ridges and the base's edges
-    // denser, so it keeps its corners as it turns.
+    // A square pyramid: four triangular sides and a base, with ridges and corners denser.
     function pyramidPoints() {
         const points = [];
         const half = CONFIG.MASK_HEIGHT * 0.42;
@@ -829,8 +817,7 @@
         return points;
     }
 
-    // A real 3D spear, sampled on its surfaces: pommel, ferrule, wrapped shaft, socket collar
-    // and a lens-sectioned blade. It lies along X so the Y spin shows every side.
+    // A real 3D spear, sampled on its surfaces, lying along X so the Y spin shows every side.
     function spearPoints() {
         const points = [];
         const TIP = CONFIG.MASK_HEIGHT / 2;
@@ -927,6 +914,46 @@
         return points;
     }
 
+    // The equalizer as a flat square instead of a wheel: an 8 × 8 grid of bars on a plane, one
+    // cell per spectrum band. A Y turn spins it as a rotating grid; also a mode, not a mask.
+    function gridPoints() {
+        const points = [];
+        const CELLS = 8;
+        const side = CONFIG.MASK_HEIGHT;
+        const pitch = side / CELLS;
+        const barWidth = pitch * 0.62;
+
+        for (let row = 0; row < CELLS; row++) {
+            for (let col = 0; col < CELLS; col++) {
+                const band = row * CELLS + col;
+                const cx = (col + 0.5) * pitch - side / 2;
+                const cz = (row + 0.5) * pitch - side / 2;
+                for (let i = 0; i < 110; i++) {
+                    points.push({
+                        x: cx + (Math.random() - 0.5) * barWidth,
+                        y: 0,
+                        z: cz + (Math.random() - 0.5) * barWidth,
+                        wait: Math.random() * 0.6,
+                        band,
+                        height: 0.08 + Math.random() * 0.92
+                    });
+                }
+            }
+        }
+
+        // The plane the bars stand on: the grid of lines itself, so the square reads as a grid.
+        for (let line = 0; line <= CELLS; line++) {
+            const at = line * pitch - side / 2;
+            for (let i = 0; i < 130; i++) {
+                const along = (Math.random() - 0.5) * side;
+                points.push({ x: along, y: 0, z: at, wait: Math.random() * 0.9, band: 0, height: 0 });
+                points.push({ x: at, y: 0, z: along, wait: Math.random() * 0.9, band: 0, height: 0 });
+            }
+        }
+
+        return points;
+    }
+
     // Registered once every generator is defined, so the table is never half-built.
     SHAPES.ball = ballPoints;
     SHAPES.cube = cubePoints;
@@ -940,8 +967,8 @@
     /*--- Geometry ---*/
 
     function buildBuffer(maskPoints) {
-        // The equalizer needs a clean stage, so the dust behind it is thinned right out.
-        const dustScale = CONFIG.MODE === 'equalizer' ? 0.18 : 1;
+        // The audio planes need a clean stage, so the dust behind them is thinned right out.
+        const dustScale = CONFIG.MODE === 'equalizer' || CONFIG.MODE === 'grid' ? 0.18 : 1;
         const dust = Math.max(0, Math.round(CONFIG.DUST_PARTICLES * dustScale));
         const total = maskPoints.length + dust;
         const stride = 13;
@@ -950,8 +977,7 @@
 
         const randomUnit = () => Math.random() * 2 - 1;
 
-        // How far the target reaches from its middle, measured before the buffer is packed:
-        // inside view, Fit and the band weights below all need it.
+        // How far the target reaches from its middle: inside view, Fit and the band weights need it.
         let reach = 0;
         for (const point of maskPoints) {
             const distance = Math.hypot(point.x, point.y, point.z);
@@ -981,9 +1007,8 @@
             data[offset++] = (sy + point.y) * 0.5 + randomUnit() * 0.55;
             data[offset++] = (sz + point.z) * 0.5 + randomUnit() * 0.85;
 
-            // Which band this point answers and how hard it moves. The equalizer brings its own
-            // pair — band, and slot up the bar — and they win; any other target gets a band
-            // from its angle round the turn axis and a weight from how far out it sits.
+            // Which band a point answers and how hard it moves. The audio planes bring their own
+            // pair and those win; anything else gets a band from its angle round the turn axis.
             data[offset++] = 0.0;
             data[offset++] = point.band === undefined ? bandOf(point) : point.band;
             data[offset++] = point.height === undefined ? reactOf(point, reach) : point.height;
@@ -1034,16 +1059,14 @@
         return { vao, buffer, count: total, maskCount: maskPoints.length, radius: reach };
     }
 
-    // A band for a point that did not bring one: the angle round the turn axis, spread over
-    // the 64 slots. A flat map or a spear therefore reads its bands left to right.
+    // A band for a point that did not bring one: its angle round the turn axis, over 64 slots.
     function bandOf(point) {
         const angle = Math.atan2(point.z, point.x);
         return ((angle + Math.PI) / (Math.PI * 2)) * 63.999;
     }
 
-    // How far a point answers the music: the middle of the shape barely moves, the outer
-    // surface swells. Small weights on purpose — a full-scale band should swell a shape,
-    // not push it out of frame.
+    // How hard a point answers the music: the middle barely moves, the outer surface swells.
+    // Small weights on purpose — a full-scale band should swell a shape, not blow it up.
     function reactOf(point, reach) {
         const outward = Math.min(1, Math.hypot(point.x, point.y, point.z) / reach);
         return 0.05 + 0.13 * outward;
@@ -1128,8 +1151,7 @@
         const elapsed = (now - startedAt) * TIME_SCALE;
         const seconds = elapsed / 1000;
 
-        // The endless turn is accumulated rather than derived from the clock, so it never jumps
-        // when a cycle rebuilds the shape, and keeps going while LOOP is off.
+        // The endless turn is accumulated, so it never jumps when a cycle rebuilds the shape.
         const frameSeconds = lastTick ? Math.min(0.1, (now - lastTick) / 1000) * TIME_SCALE : 0;
         lastTick = now;
         if (seconds > CONFIG.ASSEMBLY_MS / 1000) spinAccum += frameSeconds * CONFIG.ROTATE_SPEED;
@@ -1148,10 +1170,11 @@
 
         const zoom = Math.max(0.15, Math.min(6, Number(CONFIG.ZOOM) || 1));
         const inside = CONFIG.VIEW === 'inside';
-        // The ball wants the camera well inside its shell; the spear from just inside its tip;
-        // an imported model from just inside its own surface rather than its middle.
+        // Inside view: the ball wants to sit inside its shell, the spear inside its tip, an
+        // imported model inside its own surface. The audio planes are read from above.
         const shell = scene && scene.radius ? scene.radius : CONFIG.MASK_HEIGHT * 0.45;
-        const insideDistance = CONFIG.MODE === 'equalizer'
+        const eqPlane = CONFIG.MODE === 'equalizer' || CONFIG.MODE === 'grid';
+        const insideDistance = eqPlane
             ? 1.1
             : CONFIG.MASK_SRC === 'spear'
                 ? 2.0
@@ -1160,10 +1183,9 @@
                     : 1.1;
         const distance = (inside ? insideDistance : 10.6 - 1.5 * easeOutCubic(progress)) / zoom;
 
-        const eqMode = CONFIG.MODE === 'equalizer';
         const shake = CONFIG.SHAKE * (1 - progress * 0.85);
-        // The equalizer is a flat disc, so it is read from above instead of edge-on.
-        const eyeHeight = eqMode ? 3.4 : 0.25;
+        // Both audio planes lie flat, so they are read from above instead of edge-on.
+        const eyeHeight = eqPlane ? 3.4 : 0.25;
         const eye = inside
             ? [
                 Math.sin(seconds * 0.21) * 0.30 + Math.sin(seconds * 37.0) * shake * 0.15,
@@ -1189,7 +1211,7 @@
         const spin = stop + settle * Math.PI * 2 * CONFIG.SPIN_TURNS + spinAccum;
 
         const sway = (Number(CONFIG.SWAY) || 0) * settle * 0.5 * Math.sin(seconds * 0.7);
-        const tilt = eqMode ? 0 : (Number(CONFIG.TILT) || 0) * Math.PI / 180 + sway;
+        const tilt = eqPlane ? 0 : (Number(CONFIG.TILT) || 0) * Math.PI / 180 + sway;
         const model = rotation3D(spin, tilt, CONFIG.MASK_LIFT, [
             Number(CONFIG.PIVOT_X) || 0,
             Number(CONFIG.PIVOT_Y) || 0,
@@ -1222,7 +1244,7 @@
             gl.uniform1f(particleUniforms.uProgress, progress);
             gl.uniform1f(particleUniforms.uTime, seconds);
             const insideScale = CONFIG.MASK_SRC === 'spear' ? 0.5 : 0.9;
-            gl.uniform1f(particleUniforms.uPointSize, CONFIG.POINT_SIZE * (inside ? insideScale : 1) * (eqMode ? 0.75 : 1));
+            gl.uniform1f(particleUniforms.uPointSize, CONFIG.POINT_SIZE * (inside ? insideScale : 1) * (eqPlane ? 0.75 : 1));
             gl.uniform1f(particleUniforms.uPixelScale, pixelScale);
             gl.uniform1f(particleUniforms.uFade, fade);
             gl.uniform1f(particleUniforms.uHalfDepth, CONFIG.MASK_DEPTH * 0.5);
@@ -1231,8 +1253,8 @@
             gl.uniform1f(particleUniforms.uAudio, CONFIG.AUDIO);
             gl.uniform1fv(particleUniforms.uSpectrum, spectrum);
             gl.uniform1f(particleUniforms.uEqHeight, CONFIG.EQ_HEIGHT);
-            // The equalizer lifts its columns; every other target pushes its points out.
-            gl.uniform1f(particleUniforms.uRadial, eqMode ? 0 : 1);
+            // The audio planes lift their bars; every other target pushes its points out.
+            gl.uniform1f(particleUniforms.uRadial, eqPlane ? 0 : 1);
             gl.uniform3fv(particleUniforms.uColor, CONFIG.COLOR);
             gl.uniform3fv(particleUniforms.uColor2, accent);
 
@@ -1256,9 +1278,10 @@
 
     function rebuild(restart = true) {
         rebuilding = (rebuilding || Promise.resolve()).then(async () => {
-            const points = CONFIG.MODE === 'equalizer'
-                ? equalizerPoints()
-                : await sampleMask(CONFIG.MASK_SRC);
+            const audioPlane = CONFIG.MODE === 'equalizer' ? equalizerPoints
+                : CONFIG.MODE === 'grid' ? gridPoints
+                    : null;
+            const points = audioPlane ? audioPlane() : await sampleMask(CONFIG.MASK_SRC);
             const next = buildBuffer(points);
             next.points = points;      // kept on the CPU so the model can be exported
             disposeScene(scene);
@@ -1321,9 +1344,8 @@
         ready,
         rebuild: () => rebuild(true),
         setMask: (src) => { CONFIG.MASK_SRC = src; return rebuild(true); },
-        // An imported mesh: points already in world units, fitted by src/import.js. Kept beside
-        // CONFIG because it is geometry, not a number you can slide — handing it over as points
-        // is what keeps its depth.
+        // An imported mesh: points in world units, fitted by src/import.js. Kept beside CONFIG
+        // because it is geometry, not a number to slide — and points keep its depth.
         setPointCloud(points) {
             cloudPoints = Array.isArray(points) && points.length ? points : null;
             CONFIG.MASK_SRC = cloudPoints ? 'mesh' : 'ball';
@@ -1343,8 +1365,8 @@
             if ('ASSEMBLY_MS' in patch || 'HOLD_MS' in patch || 'FADE_MS' in patch) startedAt = 0;
             return Promise.resolve({ count: scene ? scene.count : 0 });
         },
-        // The endless turn is accumulated per frame, so a clean start has to zero it, otherwise
-        // a reset leaves whatever offset it had wound up. Returns the angle now in effect (0).
+        // The endless turn is accumulated per frame, so a clean start has to zero it or a reset
+        // leaves the offset it had wound up. Returns the angle now in effect (0).
         resetRotation() {
             spinAccum = 0;
             return spinAccum;
@@ -1364,9 +1386,8 @@
         geometry() {
             return scene && scene.points ? scene.points : [];
         },
-        // A zoom that frames the whole target, from its own reach, the assembled camera
-        // distance and the field of view. An imported model can be any size, so guessing where
-        // to put the camera is what made zooming feel stuck.
+        // A zoom that frames the whole target, from its reach, the assembled camera distance
+        // and the field of view — an imported model can be any size.
         fitZoom() {
             const radius = (scene && scene.radius) || CONFIG.MASK_HEIGHT * 0.45;
             if (!(radius > 0)) return 1;
@@ -1445,8 +1466,7 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // Arrow keys nudge the view about: left/right/up/down move the object in the frame,
-    // shift makes each press bigger. The panel's pan sliders write the same two keys.
+    // Arrow keys nudge the view about: left/right/up/down, shift for a bigger step.
     const ARROWS = {
         ArrowLeft: [-1, 0],
         ArrowRight: [1, 0],

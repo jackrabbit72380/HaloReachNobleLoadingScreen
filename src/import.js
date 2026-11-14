@@ -10,7 +10,7 @@
  *  A .blend itself is not read, and cannot be: it is Blender's own memory image plus the DNA
  *  schema of the version that wrote it, and Blender saves it zstd-compressed by default, so
  *  reading one in a page means shipping a full DNA parser and a zstd decompressor. Exporting
- *  Wavefront (.obj) or Stanford .ply is the step that gets a .blend in.
+ *  Wavefront (.obj) or Stanford (.ply) is the step that gets a .blend in.
  */
 
 (() => {
@@ -21,7 +21,9 @@
 
     const MAX_VERTICES = 400000;      // a hard stop, so one huge file cannot lock the page up
     const MAX_FACES = 800000;
-    const TARGET_POINTS = 12000;      // about what the ball and the cube use
+    // A mesh's surface is usually larger than the built-in shapes', so it gets more points than
+    // the 10–12 k the ball and the cube use, or the surfaces read thin.
+    const TARGET_POINTS = 18000;
 
     /*--- Readers ---*/
 

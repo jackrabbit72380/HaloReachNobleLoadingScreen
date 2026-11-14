@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+  <title>Holographic Particle Accelerator — default particle target</title>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round">
+    <circle cx="320" cy="320" r="292" stroke-width="13"/>
+    <circle cx="320" cy="320" r="232" stroke-width="9" stroke-dasharray="20 21"/>
+    <circle cx="320" cy="320" r="150" stroke-width="9"/>
+    <circle cx="320" cy="320" r="64" stroke-width="10"/>
+    <g stroke-width="11">
+      <line x1="469.67" y1="382.00" x2="578.70" y2="427.15"/>
+      <line x1="381.99" y1="469.67" x2="427.15" y2="578.69"/>
+      <line x1="258.01" y1="469.67" x2="212.85" y2="578.69"/>
+      <line x1="170.33" y1="382.00" x2="61.30" y2="427.15"/>
+      <line x1="170.33" y1="258.00" x2="61.30" y2="212.85"/>
+      <line x1="258.01" y1="170.33" x2="212.85" y2="61.31"/>
+      <line x1="381.99" y1="170.33" x2="427.15" y2="61.31"/>
+      <line x1="469.67" y1="258.00" x2="578.70" y2="212.85"/>
+    </g>
+  </g>
+  <g fill="#ffffff">
+    <circle cx="320" cy="320" r="34"/>
+    <circle cx="320" cy="28" r="9"/>
+    <circle cx="572.90" cy="466" r="9"/>
+    <circle cx="67.10" cy="466" r="9"/>
+  </g>
+</svg>

@@ -248,8 +248,14 @@
         return node;
     }
 
+    // toConfig / fromConfig let a slider work in its own unit — turns per second, say — while
+    // the engine keeps the number it actually wants (radians per second).
     function addRange(parent, options) {
-        const { key, label, min, max, step, value, format = (v) => String(v), live = true } = options;
+        const {
+            key, label, min, max, step, value,
+            format = (v) => String(v), live = true,
+            toConfig = (v) => v, fromConfig = (v) => v
+        } = options;
         const row = el('div', 'row');
         const name = el('span', 'label', label);
         const shown = el('span', 'value', format(value));
@@ -265,16 +271,17 @@
         input.addEventListener('input', () => {
             const next = Number(input.value);
             shown.textContent = format(next);
-            if (live) set({ [key]: next });
+            if (live) set({ [key]: toConfig(next) });
         });
         if (!live) {
-            input.addEventListener('change', () => set({ [key]: Number(input.value) }));
+            input.addEventListener('change', () => set({ [key]: toConfig(Number(input.value)) }));
         }
 
         controls.set(key, {
             set(next) {
-                input.value = next;
-                shown.textContent = format(Number(next));
+                const slider = fromConfig(Number(next));
+                input.value = slider;
+                shown.textContent = format(slider);
             }
         });
         return input;
@@ -441,14 +448,20 @@
         setStatus(view === 'inside' ? 'inside the object' : 'outside view', '');
     }
 
+    // First in the camera block, because how fast the thing turns is the setting people reach
+    // for. The slider reads in turns per second — you can picture a turn, not a radian — and
+    // converts on the way to the engine, which works in radians.
     addRange(cameraSection, {
-        key: 'ZOOM', label: 'Zoom', min: 0.35, max: 6, step: 0.05, value: 1,
-        format: (v) => `${v.toFixed(2)}×`
+        key: 'ROTATE_SPEED', label: 'Spin speed', min: 0, max: 0.5, step: 0.002,
+        value: Number((0.40 / (Math.PI * 2)).toFixed(3)),
+        format: (v) => `${v.toFixed(3)} turns/s`,
+        toConfig: (v) => v * Math.PI * 2,
+        fromConfig: (v) => Number((v / (Math.PI * 2)).toFixed(3))
     });
 
     addRange(cameraSection, {
-        key: 'ROTATE_SPEED', label: 'Spin speed', min: 0, max: 3, step: 0.05, value: 0.40,
-        format: (v) => `${v.toFixed(2)} rad/s`
+        key: 'ZOOM', label: 'Zoom', min: 0.35, max: 6, step: 0.05, value: 1,
+        format: (v) => `${v.toFixed(2)}×`
     });
 
     addRange(cameraSection, {

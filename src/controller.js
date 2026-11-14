@@ -364,9 +364,14 @@
     const audioButtons = el('div', 'buttons');
     audioSection.appendChild(audioButtons);
 
-    const audioButton = el('button', 'danger', 'Enable mic');
-    audioButton.type = 'button';
-    audioButtons.appendChild(audioButton);
+    const micButton = el('button', '', 'Microphone');
+    const systemButton = el('button', '', 'System audio');
+    const fileButton = el('button', '', 'Audio file…');
+    const stopButton = el('button', 'danger', 'Stop');
+    for (const button of [micButton, systemButton, fileButton, stopButton]) {
+        button.type = 'button';
+        audioButtons.appendChild(button);
+    }
 
     const meter = el('div', 'meter');
     const meterFill = el('i');
@@ -390,49 +395,143 @@
         meterValue.textContent = `${sensitivity.toFixed(2)}×`;
     });
 
-    audioSection.appendChild(el('div', 'note', 'Audio drives point size and brightness in real time. Nothing is recorded or uploaded.'));
+    audioSection.appendChild(el('div', 'note', 'System audio needs Chrome or Edge on Windows or Linux — tick “Share system audio” in the picker. macOS blocks it; there use a loopback device (BlackHole) as the microphone. Audio file plays locally and drives the same reaction.'));
 
-    audioButton.addEventListener('click', () => {
-        if (audioOn) stopAudio();
-        else startAudio();
+    const audioFileInput = el('input');
+    audioFileInput.type = 'file';
+    audioFileInput.accept = 'audio/*';
+    audioFileInput.hidden = true;
+    audioSection.appendChild(audioFileInput);
+
+    let audioElement = null;
+    let mediaStream = null;
+    let captureMode = '';
+
+    micButton.addEventListener('click', () => startMic());
+    systemButton.addEventListener('click', () => startSystem());
+    fileButton.addEventListener('click', () => audioFileInput.click());
+    stopButton.addEventListener('click', () => stopAudio(false));
+    audioFileInput.addEventListener('change', () => {
+        const file = audioFileInput.files && audioFileInput.files[0];
+        if (file) startFile(file);
+        audioFileInput.value = '';
     });
 
-    async function startAudio() {
+    function ensureContext() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (!analyser) {
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 1024;
+            analyser.smoothingTimeConstant = 0.75;
+            audioData = new Uint8Array(analyser.fftSize);
+        }
+        return audioCtx;
+    }
+
+    function beginListening(mode, label) {
+        captureMode = mode;
+        audioOn = true;
+        syncAudioButtons();
+        setStatus(label, '');
+        pumpAudio();
+    }
+
+    async function startMic() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             setStatus('no microphone support', 'bad');
             return;
         }
+        stopAudio(true);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioCtx.createMediaStreamSource(stream);
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 1024;
-            analyser.smoothingTimeConstant = 0.75;
-            source.connect(analyser);
-            audioData = new Uint8Array(analyser.fftSize);
-            audioOn = true;
-            audioButton.classList.add('on');
-            audioButton.textContent = 'Mic on';
-            setStatus('listening', '');
-            pumpAudio();
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+            });
+            mediaStream = stream;
+            ensureContext().createMediaStreamSource(stream).connect(analyser);
+            beginListening('mic', 'listening (mic)');
         } catch (error) {
             setStatus('microphone denied', 'bad');
         }
     }
 
-    function stopAudio() {
+    // Captures what the machine is playing. Chrome/Edge expose system audio through
+    // getDisplayMedia behind the "Share system audio" checkbox; a video track is
+    // mandatory to get the picker, so it is stopped immediately afterwards.
+    async function startSystem() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            setStatus('no system capture here', 'bad');
+            return;
+        }
+        stopAudio(true);
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: {
+                    systemAudio: 'include',
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                },
+                selfBrowserSurface: 'exclude'
+            });
+            const audioTracks = stream.getAudioTracks();
+            if (!audioTracks.length) {
+                for (const track of stream.getTracks()) track.stop();
+                setStatus('tick “Share system audio”', 'bad');
+                return;
+            }
+            for (const track of stream.getVideoTracks()) track.stop();
+            mediaStream = new MediaStream(audioTracks);
+            ensureContext().createMediaStreamSource(mediaStream).connect(analyser);
+            beginListening('system', 'listening (system)');
+        } catch (error) {
+            setStatus('system audio cancelled', 'bad');
+        }
+    }
+
+    async function startFile(file) {
+        stopAudio(true);
+        try {
+            const context = ensureContext();
+            audioElement = new Audio(URL.createObjectURL(file));
+            audioElement.loop = true;
+            context.createMediaElementSource(audioElement).connect(analyser);
+            analyser.connect(context.destination);
+            await audioElement.play();
+            beginListening('file', `listening (${file.name.slice(0, 24)})`);
+        } catch (error) {
+            setStatus('could not play that file', 'bad');
+        }
+    }
+
+    function syncAudioButtons() {
+        micButton.classList.toggle('on', audioOn && captureMode === 'mic');
+        systemButton.classList.toggle('on', audioOn && captureMode === 'system');
+        fileButton.classList.toggle('on', audioOn && captureMode === 'file');
+        stopButton.disabled = !audioOn;
+    }
+
+    function stopAudio(silent) {
         audioOn = false;
         cancelAnimationFrame(audioRaf);
-        audioButton.classList.remove('on');
-        audioButton.textContent = 'Enable mic';
-        meterFill.style.width = '0%';
-        send({ type: 'audio', level: 0 });
-        if (audioCtx) {
-            audioCtx.close();
-            audioCtx = null;
+        if (mediaStream) {
+            for (const track of mediaStream.getTracks()) track.stop();
+            mediaStream = null;
         }
-        setStatus('mic off', '');
+        if (audioElement) {
+            audioElement.pause();
+            audioElement.src = '';
+            audioElement = null;
+        }
+        if (analyser) {
+            try { analyser.disconnect(); } catch (error) { /* nothing attached */ }
+        }
+        captureMode = '';
+        send({ type: 'audio', level: 0 });
+        meterFill.style.width = '0%';
+        syncAudioButtons();
+        if (!silent) setStatus('audio off', '');
     }
 
     function pumpAudio() {
@@ -491,7 +590,9 @@
         webmButton.disabled = !caps.webm;
         webm10Button.disabled = !caps.webm;
         mp4Button.disabled = !caps.mp4;
-        audioButton.disabled = !caps.audio;
+        micButton.disabled = !caps.audio;
+        systemButton.disabled = !(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+        stopButton.disabled = !audioOn;
         mp4Button.title = caps.mp4 ? '' : 'This browser cannot record MP4 from a canvas';
     }
 

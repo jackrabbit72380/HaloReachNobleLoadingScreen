@@ -343,10 +343,10 @@
     const PRESETS = [
         ['ball', 'Ball (3D)'],
         ['spear', 'Spear (3D)'],
+        ['cube', 'Cube (3D)'],
         ['res/hpa-glyph.svg', 'Glyph (flat)'],
         ['torus', 'Torus'],
         ['atom', 'Atom'],
-        ['cube', 'Cube'],
         ['sphere', 'Sphere (flat)'],
         ['helix', 'Helix'],
         ['pyramid', 'Pyramid'],
@@ -389,12 +389,13 @@
         return pick;
     }
 
+    // Three targets are geometry the engine builds in 3D (ball, spear, cube); everything else
+    // is drawn flat on a canvas and sampled as a picture.
     function applyPreset(value) {
         const api = playerApi();
         if (!api) return needPlayer();
-        const source = value === 'ball' || value === 'spear' || value.startsWith('res/')
-            ? value
-            : makeMask(MASKS[value]);
+        const solid = value === 'ball' || value === 'spear' || value === 'cube' || value.startsWith('res/');
+        const source = solid ? value : makeMask(MASKS[value]);
         leaveEqualizer(api);
         api.set({ MODE: 'shape', MASK_SRC: source });
         setStatus('swapping target', 'busy');
@@ -1230,6 +1231,8 @@
         return surface.toDataURL('image/png');
     }
 
+    // Flat drawings, sampled as pictures. The ball, spear and cube are not here: the engine
+    // builds those as real 3D geometry, so they can be walked round.
     const MASKS = {
         torus(x, s) {
             const c = s / 2;
@@ -1262,19 +1265,6 @@
             x.beginPath(); x.arc(c + 196, c, 12, 0, Math.PI * 2); x.fill();
             x.beginPath(); x.arc(c - 98, c - 170, 12, 0, Math.PI * 2); x.fill();
             x.beginPath(); x.arc(c - 98, c + 170, 12, 0, Math.PI * 2); x.fill();
-        },
-        cube(x, s) {
-            const c = s / 2;
-            const d = 86;
-            const o = 52;
-            x.beginPath(); x.rect(c - d, c - d, d * 2, d * 2); x.stroke();
-            x.beginPath(); x.rect(c - d + o, c - d - o, d * 2, d * 2); x.stroke();
-            for (const [px, py] of [[-d, -d], [d, -d], [d, d], [-d, d]]) {
-                x.beginPath();
-                x.moveTo(c + px, c + py);
-                x.lineTo(c + px + o, c + py - o);
-                x.stroke();
-            }
         },
         sphere(x, s) {
             const c = s / 2;

@@ -50,11 +50,26 @@ yourself and use the API from that window.
 
 The default target is a 3D spear generated inside the engine: pommel, ferrule, wrapped shaft,
 socket collar and a leaf blade with a lens cross-section, sampled on its surfaces (~12 000
-points). It lies along X, so the spin shows every side of the blade. Once assembled it never
-stops turning — the **Spin speed** slider sets the rate in radians per second, and 0 stops it.
+points). It lies along X, so the spin shows every side of the blade.
 
 Any PNG / JPEG / WebP / SVG still works: it is sampled flat with depth, and procedural shapes
 (torus, atom, cube, sphere, helix, pyramid, star) are drawn in the panel and fed in the same way.
+
+### Turning
+
+The turn never stops. The assembly winds the shape in and eases it to **Settle angle** (0–360°),
+so the pose it finishes coming together at is something you pick; from that angle an accumulated
+spin carries it round forever. Because the angle is accumulated per frame rather than read from
+the clock, it never jumps or pauses when a cycle rebuilds the shape.
+
+**Timing → Rebuild loop** off skips the hold, fade and rebuild entirely: assemble once, then
+rotate indefinitely. With the loop on, the same endless turn keeps running through each rebuild.
+
+| Control | What it does |
+| :--- | :--- |
+| **Spin speed** | Radians per second of the endless turn. 0 freezes the pose. |
+| **Settle angle** | The yaw the assembly comes to rest at, in degrees. |
+| **Rebuild loop** | On: assemble, hold, fade, rebuild forever. Off: assemble once and keep turning. |
 
 ## Camera
 
@@ -71,9 +86,9 @@ Any PNG / JPEG / WebP / SVG still works: it is sampled flat with depth, and proc
 | **Particle window** | Open / raise / close the window the animation runs in. |
 | **Target** | Spear (3D), the flat glyph, six procedural shapes, or any image — load, drag-and-drop or paste, then **Rebuild**. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
-| **Camera** | Zoom, spin speed, outside / inside view. |
+| **Camera** | Zoom, spin speed, settle angle, outside / inside view. |
 | **Visualizer** | Equalizer ring on/off and its band height. |
-| **Timing** | Assembly, hold and fade durations. |
+| **Timing** | Assembly, hold and fade durations, plus the rebuild loop toggle. |
 | **Look** | Tint, glow falloff, chromatic rim, caption text and size. |
 | **Effects** | Grid, scanlines, vignette, camera shake — on/off. |
 | **Audio** | Microphone, system audio or a local audio file. Level drives size and brightness. |
@@ -108,6 +123,7 @@ stored or uploaded. Sensitivity scales the response; the meter shows the live le
 ```js
 HPA.set({ COLOR: [1, 0.4, 0.2], POINT_SIZE: 42 });  // any CONFIG key
 HPA.set({ VIEW: 'inside', ZOOM: 2.4 });             // camera
+HPA.set({ STOP_ANGLE: 90, LOOP: false });           // pose + endless turn
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
 HPA.setMask('spear');                               // 'spear' or an image URL / data URL
 HPA.rebuild();                                      // resample and restart
@@ -130,4 +146,5 @@ HPA.snapshot();                                     // counts + current config
 ## Defaults
 
 `CONFIG` at the top of `src/engine.js`: 3D spear target, 260-sample mask, 6 000 dust motes,
-7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s continuous spin, tint `#a1d6ff`.
+7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s endless spin from a 0° settle angle, loop on,
+tint `#a1d6ff`.

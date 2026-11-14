@@ -95,16 +95,18 @@ so the pose it finishes coming together at is something you pick; from that angl
 spin carries it round forever. Because the angle is accumulated per frame rather than read from
 the clock, it never jumps or pauses when a cycle rebuilds the shape.
 
-**Timing → Rebuild loop** off skips the hold, fade and rebuild entirely: assemble once, then
-rotate indefinitely — that is the "comes together, then turns forever" setting. With the loop on,
-the same endless turn keeps running through each rebuild.
+**Infinite rotation** — the checkbox in **Camera**, or **Timing → Rebuild loop** off, they are the
+same setting — drops the hold, the fade and the rebuild entirely: the shape assembles once, then
+turns forever and never fades out to come back. With it off, the cycle runs assemble, hold, fade,
+rebuild over and over, and the endless turn carries on underneath each rebuild.
 
 | Control | What it does |
 | :--- | :--- |
 | **Spin speed** | Turns per second of the endless turn — one turn is 360°. 0 freezes the pose; below 0 turns the other way. |
 | **Turn axis** | **Y — turntable** (the default), **X — tumble**, **Z — roll**: which axis the endless turn goes round. |
+| **Infinite rotation** | Off/on for the rebuild cycle: on assembles once and turns forever with no fade. |
 | **Settle angle** | The yaw the assembly comes to rest at, in degrees. |
-| **Rebuild loop** | On: assemble, hold, fade, rebuild forever. Off: assemble once and keep turning. |
+| **Rebuild loop** | The same switch from the Timing side: on rebuilds forever, off assembles once. |
 
 That accumulation is also why **Reset** has to zero it: restoring the settle angle is not enough
 on its own, because the turn already banked would be added on top of it. `HPA.reset()` therefore
@@ -117,6 +119,7 @@ with — a reset really is the fresh-page pose.
 | :--- | :--- |
 | **Spin speed** | Turns per second, first slider in the section, right above the three turn buttons. Negative turns it the other way. |
 | **Turn axis** | Y (turntable), X (tumble) or Z (roll) — the axis the endless turn goes round. |
+| **Infinite rotation** | Checkbox: assemble once, then turn forever — no hold, no fade, no rebuild. The same setting as **Timing → Rebuild loop**, off; the two move together. |
 | **Zoom** | Camera distance, 0.35×–6×. The mouse wheel over the particle window does the same. |
 | **Outside view** | Orbit camera looking in at the object. |
 | **Inside view** | Camera sits inside the ball's shell (or just inside the spear's tip), so the shape wraps around you. |
@@ -195,7 +198,7 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 | **Target** | Ball, cube, torus, atom, helix, pyramid, star, spear, imported mesh — all 3D — plus the glyph or any image, load, drop or paste, then **Rebuild**. |
 | **Title** | The caption under the shape and its size. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
-| **Camera** | Spin speed and turn axis, zoom, settle angle, tilt, the pivot, pan, outside / inside view. |
+| **Camera** | Spin speed and turn axis, infinite rotation, zoom, settle angle, tilt, the pivot, pan, outside / inside view. |
 | **Show** | Inside spin, music visualizer and rainbow modes, their presets, and the shuffle timer. |
 | **Visualizer** | Equalizer ring on/off and its band height. |
 | **Timing** | Assembly, hold and fade durations, plus the rebuild loop toggle. |
@@ -206,9 +209,9 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 
 **Reset** in the top-right puts every setting back to the shipped defaults — in the engine and
 in the panel — and starts the assembly over: ball target, the shipped caption, 0.064 turns/s on
-the Y axis, settle angle 0°, tilt 0°, pivot 0, 0, 0, no pan, loop on, tint `#a1d6ff`, show mode
-off, and the accumulated turn back to zero so the pose is the fresh-page one rather than that
-angle plus whatever it had turned.
+the Y axis, settle angle 0°, tilt 0°, pivot 0, 0, 0, no pan, rebuild loop on (so Infinite
+rotation off), tint `#a1d6ff`, show mode off, and the accumulated turn back to zero so the pose is
+the fresh-page one rather than that angle plus whatever it had turned.
 
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
@@ -277,7 +280,7 @@ HPA.set({ LABEL: 'Your title' });                   // the line under the shape
 HPA.set({ CAPTION_SCALE: 1.4 });                    // and how big it is
 HPA.set({ VIEW: 'inside', ZOOM: 2.4 });             // camera
 HPA.set({ TILT: 0, PAN_X: 0, PAN_Y: 0 });           // head-on, centred
-HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + endless turn
+HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + turn forever
 HPA.set({ SPIN_AXIS: 'z' });                        // 'y' turntable | 'x' tumble | 'z' roll
 HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly settles at
 HPA.set({ PIVOT_Y: -2.07 });                        // turn on the base, not the middle
@@ -302,7 +305,8 @@ HPA.snapshot();                                     // counts, config and the tu
 ```
 
 `ROTATE_SPEED` is radians per second in the API; the panel's **Spin speed** slider shows the same
-number in turns per second, so 0.064 turns/s is the default 0.40 rad/s.
+number in turns per second, so 0.064 turns/s is the default 0.40 rad/s. `LOOP: false` is the
+Infinite rotation checkbox.
 
 ## Flags
 

@@ -100,7 +100,7 @@ The **Show** section runs the animation by itself. Pick a mode and leave it runn
 | **Inside spin** | Puts the camera inside the ball, turns the rebuild loop off and lets the endless spin carry the view round forever. |
 | **Music visualizer** | The zoom rises and falls with the audio level and the tint walks round the wheel; how hard is the **Zoom pulse** slider. |
 | **Rainbow** | The tint sweeps the whole wheel on its own — a turn every five seconds at rest, faster as **Colour drift** goes up. |
-| **Off** | Hands the picture back: the original tint and zoom return and the panel is in charge again. |
+| **Off** | Hands the picture back: the original tint and zoom return, the camera goes back outside and the panel is in charge again. |
 
 Three visualizer presets:
 
@@ -114,6 +114,9 @@ Shuffle picks shapes with the panel's own *Random shape* button, so the procedur
 the rotation as well as the ball and spear. **Zoom pulse**, **Colour drift** and **Shuffle every**
 apply live; the level comes from whatever the Audio response section is listening to, and with no
 audio the visualizer still breathes on its own.
+
+The **Inside spin** and **Off** modes move the camera as well, so the **Camera** section's
+*Outside view* / *Inside view* buttons light up to match rather than keeping the state they had.
 
 ## Controller
 
@@ -147,7 +150,7 @@ the frame.
 **Capture → Model (.obj)** or **Model (.ply)** writes the target you are looking at — ball, spear,
 glyph, a procedural shape or a loaded image — as a point cloud: one vertex per particle, world
 units, Y up, no faces. Blender imports either one in a single step (File → Import → Wavefront
-`.obj`, or New Stanford `.ply`); instance a sphere or a metaball on the points to give them body.
+`.obj`, or New Stanford `.ply`); instance a sphere or metaball on the points to give them body.
 
 There is no `.blend` export, and it is not a missing feature: a `.blend` is a dump of Blender's
 own memory plus the DNA schema of the version that wrote it, and no writer exists outside
@@ -164,7 +167,7 @@ times a second from whatever audio source is listening; with no audio the disc l
 
 | Source | How |
 | :--- | :--- |
-| **System audio** | Chrome / Edge on Windows or Linux. Click *System audio*, pick a screen or window, and tick **Share system audio**. Captures whatever the machine plays — Spotify, a DAW, a video. macOS does not offer this. |
+| **System audio** | Chrome or Edge on Windows or Linux. Click *System audio*, pick a screen or window, and tick **Share system audio**. Captures whatever the machine plays — Spotify, a DAW, a video. macOS does not offer this. |
 | **Microphone** | Works everywhere; on a Mac route system sound into a loopback device (e.g. BlackHole) and select it as the input. |
 | **Audio file** | Pick an MP3 / WAV / OGG / M4A — it plays through the page on loop and drives the same reaction. |
 

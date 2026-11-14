@@ -190,8 +190,7 @@
 
         eqOn = config.MODE === 'equalizer';
         eqButton.classList.toggle('on', eqOn);
-        outsideButton.classList.toggle('on', config.VIEW !== 'inside');
-        insideButton.classList.toggle('on', config.VIEW === 'inside');
+        syncViewButtons(config.VIEW);
     }
 
     function updateConnection() {
@@ -451,9 +450,15 @@
         const api = playerApi();
         if (!api) return needPlayer();
         api.set({ VIEW: view });
-        outsideButton.classList.toggle('on', view === 'orbit');
-        insideButton.classList.toggle('on', view === 'inside');
+        syncViewButtons(view);
         setStatus(view === 'inside' ? 'inside the object' : 'outside view', '');
+    }
+
+    // One place turns the two view buttons on and off, so the panel, Reset and the Show modes
+    // cannot end up disagreeing about where the camera is.
+    function syncViewButtons(view) {
+        outsideButton.classList.toggle('on', view !== 'inside');
+        insideButton.classList.toggle('on', view === 'inside');
     }
 
     // First in the camera block, because how fast the thing turns is the setting people reach
@@ -650,10 +655,14 @@
             return;
         }
 
+        // The modes move the camera too, so the view buttons follow them: inside spin sits the
+        // camera in among the particles, and Off hands the outside view back.
         if (mode === 'inside') {
             api.set({ VIEW: 'inside', LOOP: false, STOP_ANGLE: 0 });
+            syncViewButtons('inside');
         } else if (mode === 'off') {
-            api.set({ LOOP: true });
+            api.set({ VIEW: 'orbit', LOOP: true });
+            syncViewButtons('orbit');
         }
 
         if (api.show) {

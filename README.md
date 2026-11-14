@@ -1,9 +1,9 @@
 # Holographic Particle Accelerator
 
-A WebGL2 particle animation. Thousands of points fly in from a sphere and assemble any
-image you point them at, hold, then rebuild — forever. The controller runs in its own window
-and drives the animation in a **second, separate window**: swap the target, change colour and
-effects, react to music, capture PNG / WebP / video.
+A WebGL2 particle animation. Thousands of points fly in from a sphere and assemble a real 3D
+spear — or any image you point them at — then keep turning, hold, and rebuild. A separate
+controller window drives it: swap the target, change colour and effects, zoom, move the camera
+inside the object, react to music, capture PNG / WebP / video.
 
 Written by **Jackrabbit72380**. No libraries, no build step.
 
@@ -11,11 +11,11 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | :--- | :--- |
 | `index.html` | The animation (the particle window). Flags below. |
 | `controller.html` | The control panel, in its own window. |
-| `src/engine.js` | The whole engine — sampling, buffers, shaders, `window.HPA`. |
+| `src/engine.js` | The whole engine — shapes, buffers, shaders, `window.HPA`. |
 | `src/relay.js` | Offers the particle window to its opener, so a reloaded panel re-attaches. |
 | `src/controller.js` | Panel logic and the link to the particle window. |
 | `src/style.css`, `src/controller.css` | Styling. |
-| `res/hpa-glyph.svg` | Default particle target (authored for this project). |
+| `res/hpa-glyph.svg` | Optional flat target (the default is the 3D spear). |
 
 ## Run
 
@@ -27,7 +27,7 @@ python3 -m http.server 3000
 2. Press **Open particle window** — the animation opens in its own window.
 3. Drive it from the panel. **Bring to front** raises it, **Close** disconnects.
 
-`file://` will not work — reading the mask image needs HTTP.
+`file://` will not work — reading a mask image needs HTTP.
 
 ### How the two windows talk
 
@@ -46,21 +46,49 @@ fresh.
 If popups are blocked the panel says so — allow popups for the page, or open `index.html`
 yourself and use the API from that window.
 
+## The shape
+
+The default target is a 3D spear generated inside the engine: pommel, ferrule, wrapped shaft,
+socket collar and a leaf blade with a lens cross-section, sampled on its surfaces (~12 000
+points). It lies along X, so the spin shows every side of the blade. Once assembled it never
+stops turning — the **Spin speed** slider sets the rate in radians per second, and 0 stops it.
+
+Any PNG / JPEG / WebP / SVG still works: it is sampled flat with depth, and procedural shapes
+(torus, atom, cube, sphere, helix, pyramid, star) are drawn in the panel and fed in the same way.
+
+## Camera
+
+| Control | What it does |
+| :--- | :--- |
+| **Zoom** | Camera distance, 0.35×–6×. The mouse wheel over the particle window does the same. |
+| **Outside view** | Orbit camera looking in at the object. |
+| **Inside view** | Camera sits inside the particle cloud, close to the spear's axis, so the spear sweeps past you. |
+
 ## Controller
 
 | Section | What it does |
 | :--- | :--- |
 | **Particle window** | Open / raise / close the window the animation runs in. |
-| **Target** | Load any PNG / JPEG / WebP / SVG, drag-and-drop or paste it onto the panel, hit **Rebuild**, or swap between procedural shapes (torus, atom, cube, sphere, helix, pyramid, star). |
-| **Particles** | Density (how many samples the mask is read at), point size, slab depth, spin turns, dust motes. |
+| **Target** | Spear (3D), the flat glyph, six procedural shapes, or any image — load, drag-and-drop or paste, then **Rebuild**. |
+| **Particles** | Density, point size, slab depth, spin turns, dust motes. |
+| **Camera** | Zoom, spin speed, outside / inside view. |
+| **Visualizer** | Equalizer ring on/off and its band height. |
 | **Timing** | Assembly, hold and fade durations. |
 | **Look** | Tint, glow falloff, chromatic rim, caption text and size. |
 | **Effects** | Grid, scanlines, vignette, camera shake — on/off. |
-| **Audio** | Three sources: microphone, system audio, or a local audio file. Level drives point size and brightness. |
+| **Audio** | Microphone, system audio or a local audio file. Level drives size and brightness. |
 | **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it — captured inside the particle window. |
 
-Everything is applied live except density, depth and dust, which rebuild the particle buffer.
-Video is captured from the canvas only, so the caption overlay is not in the frame.
+Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
+the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
+the frame.
+
+## Equalizer ring
+
+**Visualizer → Equalizer ring** replaces the shape with a flat disc of 64 bars standing on a
+plane. The plane turns with the model, and each bar rises with its own frequency band, so it
+reads as a circular graphic equalizer in 3D. Bars rise from the spectrum the panel sends 60
+times a second from whatever audio source is listening; with no audio the disc lies flat.
 
 ### Reacting to music
 
@@ -70,8 +98,8 @@ Video is captured from the canvas only, so the caption overlay is not in the fra
 | **Microphone** | Works everywhere; on a Mac route system sound into a loopback device (e.g. BlackHole) and select it as the input. |
 | **Audio file** | Pick an MP3 / WAV / OGG / M4A — it plays through the page on loop and drives the same reaction. |
 
-Only the level (RMS) is used — nothing is recorded, stored or uploaded. Sensitivity scales the
-response; the meter shows the live level.
+Only the level (RMS, plus 64 spectrum bands for the equalizer) is used — nothing is recorded,
+stored or uploaded. Sensitivity scales the response; the meter shows the live level.
 
 ## Engine API
 
@@ -79,12 +107,15 @@ response; the meter shows the live level.
 
 ```js
 HPA.set({ COLOR: [1, 0.4, 0.2], POINT_SIZE: 42 });  // any CONFIG key
-HPA.setMask('res/hpa-glyph.svg');                    // image URL or data URL
-HPA.rebuild();                                       // resample and restart
-HPA.setAudio(0.7);                                   // 0..1
-HPA.capture('image/png');                            // data URL
-HPA.record({ ms: 5000, mime: 'video/webm' });        // Promise<Blob>
-HPA.snapshot();                                      // counts + current config
+HPA.set({ VIEW: 'inside', ZOOM: 2.4 });             // camera
+HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
+HPA.setMask('spear');                               // 'spear' or an image URL / data URL
+HPA.rebuild();                                      // resample and restart
+HPA.setAudio(0.7);                                  // 0..1, drives size and glow
+HPA.setSpectrum(bands);                             // Float32Array(64), 0..1 per band
+HPA.capture('image/png');                           // data URL
+HPA.record({ ms: 5000, mime: 'video/webm' });       // Promise<Blob>
+HPA.snapshot();                                     // counts + current config
 ```
 
 ## Flags
@@ -98,5 +129,5 @@ HPA.snapshot();                                      // counts + current config
 
 ## Defaults
 
-`CONFIG` at the top of `src/engine.js`: 260-sample mask, 6 000 dust motes, 7 s assembly,
-4.8 s hold, 1.2 s fade, one full spin, 0.9 slab depth, tint `#a1d6ff`.
+`CONFIG` at the top of `src/engine.js`: 3D spear target, 260-sample mask, 6 000 dust motes,
+7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s continuous spin, tint `#a1d6ff`.

@@ -15,8 +15,10 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | `src/relay.js` | Offers the particle window to its opener, so a reloaded panel re-attaches. |
 | `src/reset.js` | `HPA.reset()` — puts the shipped settings back. |
 | `src/show.js` | `HPA.show()` — the autopilot behind the show modes. |
+| `src/export.js` | `HPA.exportModel()` — the target as an OBJ / PLY model. |
 | `src/controller.js` | Panel logic and the link to the particle window. |
 | `src/show-panel.js` | The panel's **Show** section. |
+| `src/export-panel.js` | The model buttons in the **Capture** section. |
 | `src/style.css`, `src/controller.css` | Styling. |
 | `res/hpa-glyph.svg` | Optional flat target (the default is the 3D ball). |
 
@@ -121,7 +123,7 @@ audio the visualizer still breathes on its own.
 | **Look** | Tint, glow falloff, chromatic rim, caption text and size. |
 | **Effects** | Grid, scanlines, vignette, camera shake — on/off. |
 | **Audio** | Microphone, system audio or a local audio file. Level drives size and brightness. |
-| **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it — captured inside the particle window. |
+| **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it, and the model download — captured inside the particle window. |
 
 **Reset** in the top-right puts every setting back to the shipped defaults — in the particle
 window and in the panel — and starts the assembly over: ball target, 0.064 turns/s, settle angle
@@ -130,6 +132,17 @@ window and in the panel — and starts the assembly over: ball target, 0.064 tur
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
 the frame.
+
+### Model export
+
+**Capture → Model (.obj)** or **Model (.ply)** writes the target you are looking at — ball, spear,
+glyph, a procedural shape or a loaded image — as a point cloud: one vertex per particle, world
+units, Y up, no faces. Blender imports either one in a single step (File → Import → Wavefront
+`.obj`, or New Stanford `.ply`); instance a sphere or a metaball on the points to give them body.
+
+There is no `.blend` export, and it is not a missing feature: a `.blend` is a dump of Blender's
+own memory plus the DNA schema of the version that wrote it, and no writer exists outside
+Blender itself. The two formats above are how the geometry gets into Blender without it.
 
 ## Equalizer ring
 
@@ -165,6 +178,8 @@ HPA.reset();                                        // shipped settings back, as
 HPA.show({ mode: 'rainbow' });                      // 'off' | 'inside' | 'visualizer' | 'rainbow'
 HPA.show({ mode: 'visualizer', preset: 'chaos', pulse: 0.6, drift: 0.4 });
 HPA.show.reset();                                   // autopilot off, picture restored
+HPA.geometry();                                     // the target's points, [{x, y, z}, …]
+HPA.exportModel('obj');                             // download the target ('obj' | 'ply')
 HPA.setAudio(0.7);                                  // 0..1, drives size and glow
 HPA.setSpectrum(bands);                             // Float32Array(64), 0..1 per band
 HPA.capture('image/png');                           // data URL

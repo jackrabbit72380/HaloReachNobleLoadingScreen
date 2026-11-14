@@ -19,6 +19,7 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | `src/controller.js` | Panel logic and the link to the particle window. |
 | `src/show-panel.js` | The panel's **Show** section. |
 | `src/export-panel.js` | The model buttons in the **Capture** section. |
+| `src/camera-panel.js` | Tilt, pan and the pad in the **Camera** section. |
 | `src/style.css`, `src/controller.css` | Styling. |
 | `res/hpa-glyph.svg` | Optional flat target (the default is the 3D ball). |
 
@@ -84,6 +85,14 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 | **Zoom** | Camera distance, 0.35×–6×. The mouse wheel over the particle window does the same. |
 | **Outside view** | Orbit camera looking in at the object. |
 | **Inside view** | Camera sits inside the ball's shell (or just inside the spear's tip), so the shape wraps around you. |
+| **Tilt** | Pitch of the object in degrees. 0° is dead head-on; positive tips the top away from you. |
+| **Pan left / right**, **Pan up / down** | Slides the view in world units, as far as ±6. |
+| **Arrow keys** | In the particle window, nudge the view left/right/up/down 0.25 at a press, 1.0 with shift. |
+| **Head-on** | Puts the tilt and both pan offsets back to zero. |
+
+The pitch used to be a fixed lean, which is why shapes always looked like they were being viewed
+from above. It now comes from **Tilt** (default 0°), so a fresh page shows the target level, and
+the old slow wobble is available separately as `SWAY` if you want the pose to breathe again.
 
 ## Show
 
@@ -116,7 +125,7 @@ audio the visualizer still breathes on its own.
 | **Particle window** | Open / raise / close the window the animation runs in. |
 | **Target** | Ball (3D), spear (3D), the flat glyph, six procedural shapes, or any image — load, drag-and-drop or paste, then **Rebuild**. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
-| **Camera** | Spin speed, zoom, settle angle, outside / inside view. |
+| **Camera** | Spin speed, zoom, settle angle, tilt and pan, outside / inside view. |
 | **Show** | Inside spin, music visualizer and rainbow modes, their presets, and the shuffle timer. |
 | **Visualizer** | Equalizer ring on/off and its band height. |
 | **Timing** | Assembly, hold and fade durations, plus the rebuild loop toggle. |
@@ -127,7 +136,7 @@ audio the visualizer still breathes on its own.
 
 **Reset** in the top-right puts every setting back to the shipped defaults — in the particle
 window and in the panel — and starts the assembly over: ball target, 0.064 turns/s, settle angle
-0°, loop on, tint `#a1d6ff`, show mode off.
+0°, tilt 0°, no pan, loop on, tint `#a1d6ff`, show mode off.
 
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
@@ -169,6 +178,7 @@ stored or uploaded. Sensitivity scales the response; the meter shows the live le
 ```js
 HPA.set({ COLOR: [1, 0.4, 0.2], POINT_SIZE: 42 });  // any CONFIG key
 HPA.set({ VIEW: 'inside', ZOOM: 2.4 });             // camera
+HPA.set({ TILT: 0, PAN_X: 0, PAN_Y: 0 });           // head-on, centred
 HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + endless turn
 HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly settles at
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
@@ -203,4 +213,4 @@ number in turns per second, so 0.064 turns/s is the default 0.40 rad/s.
 
 `CONFIG` at the top of `src/engine.js`: 3D ball target, 260-sample mask, 6 000 dust motes,
 7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s (0.064 turns/s) endless spin from a 0° settle
-angle, loop on, tint `#a1d6ff`.
+angle, tilt 0° (head-on), no pan, loop on, tint `#a1d6ff`.

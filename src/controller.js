@@ -199,7 +199,9 @@
         densityValue.textContent = `${Number(config.SAMPLE_WIDTH).toFixed(0)} px`;
 
         const known = PRESETS.some(([value]) => value === config.MASK_SRC);
-        presetSelect.value = known ? config.MASK_SRC : 'ball';
+        presetSelect.value = config.MODE === 'equalizer'
+            ? 'equalizer'
+            : known ? config.MASK_SRC : 'ball';
 
         eqOn = config.MODE === 'equalizer';
         eqButton.classList.toggle('on', eqOn);
@@ -350,8 +352,9 @@
     sourceSection.appendChild(modelInput);
 
     // Every name here is a target the engine builds or holds in 3D, or — the glyph — an image
-    // file it samples as a picture. The panel just passes the name along; the engine builds
-    // every one of them itself.
+    // file it samples as a picture. The equalizer is the one that answers the music: it is a
+    // mode rather than a mask, so picking it switches the mode. The panel just passes the name
+    // along; the engine builds every one of them itself.
     const presetRow = el('div', 'row wide');
     presetRow.style.marginTop = '10px';
     const presetSelect = el('select');
@@ -364,6 +367,7 @@
         ['pyramid', 'Pyramid (3D)'],
         ['star', 'Star (3D)'],
         ['spear', 'Spear (3D)'],
+        ['equalizer', 'Equalizer (audio bars)'],
         ['mesh', 'Imported mesh (3D)'],
         ['res/hpa-glyph.svg', 'Glyph (image)']
     ];
@@ -374,7 +378,7 @@
     }
     presetRow.appendChild(presetSelect);
     sourceSection.appendChild(presetRow);
-    sourceSection.appendChild(el('div', 'note', 'Every shape is real 3D geometry — turn it and you see the far side. A picture (any PNG, JPEG, WebP or SVG, or the glyph) is flat by nature: dark pixels on light, or a transparent cut-out. Drop or paste a file anywhere on this page. A mesh comes in as a .obj or .ply exported from Blender, and arrives with its depth intact.'));
+    sourceSection.appendChild(el('div', 'note', 'Every shape is real 3D geometry — turn it and you see the far side. A picture (any PNG, JPEG, WebP or SVG, or the glyph) is flat by nature: dark pixels on light, or a transparent cut-out. Drop or paste a file anywhere on this page. A mesh comes in as a .obj or .ply exported from Blender, and arrives with its depth intact. Equalizer is the disc of bars that answers the audio.'));
 
     loadButton.addEventListener('click', () => fileInput.click());
     modelButton.addEventListener('click', () => modelInput.click());
@@ -394,12 +398,13 @@
     presetSelect.addEventListener('change', () => applyPreset(presetSelect.value));
 
     // One place picks the next target, so the button and the visualizer's shuffle agree. The
-    // narrowed shapes are left out: the ball and spear are the default look, and the imported
-    // mesh is whatever file was loaded, not a shape to roll.
+    // narrowed shapes are left out: the ball and spear are the default look, the imported mesh
+    // is whatever file was loaded, and the equalizer belongs to the audio rather than to a roll.
     function randomShape() {
         const shapeKeys = PRESETS
             .map(([value]) => value)
-            .filter((value) => value !== 'ball' && value !== 'spear' && value !== 'mesh' && !value.startsWith('res/'));
+            .filter((value) => value !== 'ball' && value !== 'spear' && value !== 'mesh'
+                && value !== 'equalizer' && !value.startsWith('res/'));
         const pick = shapeKeys[Math.floor(Math.random() * shapeKeys.length)];
         presetSelect.value = pick;
         applyPreset(pick);
@@ -407,10 +412,23 @@
     }
 
     // Every preset value is a mask source the engine understands: a registered shape name, the
-    // imported cloud ('mesh'), or an image URL. There is nothing left to paint here.
+    // imported cloud ('mesh'), or an image URL. The equalizer is the exception — it is a mode
+    // rather than a mask, since its columns answer the audio — so picking it here switches the
+    // mode instead of the source. It is the shape that goes with the music, and it belongs in
+    // this list with the others rather than only in the Visualizer section.
     function applyPreset(value) {
         const api = playerApi();
         if (!api) return needPlayer();
+
+        if (value === 'equalizer') {
+            eqOn = true;
+            if (eqButton) eqButton.classList.add('on');
+            api.set({ MODE: 'equalizer' });
+            setStatus('equalizer — reacts to the audio', 'busy');
+            window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1000);
+            return;
+        }
+
         leaveEqualizer(api);
         api.set({ MODE: 'shape', MASK_SRC: value });
         setStatus('swapping target', 'busy');
@@ -941,6 +959,9 @@
         eqOn = !eqOn;
         eqButton.classList.toggle('on', eqOn);
         api.set({ MODE: eqOn ? 'equalizer' : 'shape' });
+        // Keep the Target list honest: the ring is a target too now.
+        if (eqOn) presetSelect.value = 'equalizer';
+        else if (PRESETS.some(([value]) => value === api.config.MASK_SRC)) presetSelect.value = api.config.MASK_SRC;
         setStatus(eqOn ? 'equalizer ring' : 'shape target', 'busy');
         window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1000);
     });
@@ -950,7 +971,7 @@
         format: (v) => v.toFixed(1)
     });
 
-    visualizerSection.appendChild(el('div', 'note', 'A flat disc of 64 bars that turns with the model; each bar rises with its own frequency band once an audio source is listening.'));
+    visualizerSection.appendChild(el('div', 'note', 'A flat disc of 64 bars that turns with the model; each bar rises with its own frequency band once an audio source is listening. It is also in the Target list, where it is called Equalizer (audio bars).'));
 
     /*--- Timing ---*/
 

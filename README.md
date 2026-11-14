@@ -16,10 +16,7 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | `src/reset.js` | `HPA.reset()` — puts the shipped settings back. |
 | `src/show.js` | `HPA.show()` — the autopilot behind the show modes. |
 | `src/export.js` | `HPA.exportModel()` — the target as an OBJ / PLY model. |
-| `src/controller.js` | Panel logic and the link to the particle window. |
-| `src/show-panel.js` | The panel's **Show** section. |
-| `src/export-panel.js` | The model buttons in the **Capture** section. |
-| `src/camera-panel.js` | Tilt, pan and the pad in the **Camera** section. |
+| `src/controller.js` | Every section of the panel, in the order it appears, and the link to the particle window. |
 | `src/style.css`, `src/controller.css` | Styling. |
 | `res/hpa-glyph.svg` | Optional flat target (the default is the 3D ball). |
 
@@ -119,6 +116,9 @@ apply live; the level comes from whatever the Audio response section is listenin
 audio the visualizer still breathes on its own.
 
 ## Controller
+
+All of the panel is built in `src/controller.js` — one block per section, in the order the table
+below lists them, so a control's markup and the engine call it makes sit together.
 
 | Section | What it does |
 | :--- | :--- |

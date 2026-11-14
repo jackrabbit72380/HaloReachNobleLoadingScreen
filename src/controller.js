@@ -6,7 +6,7 @@
  *  Both pages are same-origin, so the controller keeps a live reference to the
  *  player and calls window.HPA directly — no embedding, no message protocol.
  *
- *  Every section of the panel is built in this file, in the order it appears:
+ *  Every section of the panel is built here, in the order it appears:
  *    Target, Particles, Camera, Show, Visualizer, Timing, Look, Effects, Audio, Capture
  */
 
@@ -477,7 +477,7 @@
         format: (v) => `${v.toFixed(0)}°`
     });
 
-    // Aiming: the pitch of the object and where the view sits in the frame.
+    // Aiming: the pitch of the object, and where the view sits in the frame.
     addRange(cameraSection, {
         key: 'TILT', label: 'Tilt (object)', min: -90, max: 90, step: 1, value: 0,
         format: (v) => `${v.toFixed(0)}°`
@@ -600,27 +600,32 @@
     showPresetRow.appendChild(showPresetSelect);
     showSection.appendChild(showPresetRow);
 
-    addRange(showSection, {
+    // These three steer this side of the autopilot only, so they are pushed by hand rather
+    // than through addRange's live path (they have no CONFIG key of their own).
+    const pulseInput = addRange(showSection, {
         key: 'SHOW_PULSE', label: 'Zoom pulse', min: 0, max: 1, step: 0.05, value: show.pulse,
         format: (v) => `${Math.round(v * 100)}%`, live: false
-    }).addEventListener('input', () => {
-        show.pulse = Number(showSection.querySelectorAll('input[type=range]')[0].value);
+    });
+    pulseInput.addEventListener('input', () => {
+        show.pulse = Number(pulseInput.value);
         pushShow();
     });
 
-    addRange(showSection, {
+    const driftInput = addRange(showSection, {
         key: 'SHOW_DRIFT', label: 'Colour drift', min: 0, max: 1, step: 0.05, value: show.drift,
         format: (v) => `${Math.round(v * 100)}%`, live: false
-    }).addEventListener('input', () => {
-        show.drift = Number(showSection.querySelectorAll('input[type=range]')[1].value);
+    });
+    driftInput.addEventListener('input', () => {
+        show.drift = Number(driftInput.value);
         pushShow();
     });
 
-    addRange(showSection, {
+    const shuffleInput = addRange(showSection, {
         key: 'SHOW_SHUFFLE', label: 'Shuffle every', min: 4, max: 40, step: 1, value: show.shuffle,
         format: (v) => `${v} s`, live: false
-    }).addEventListener('input', () => {
-        show.shuffle = Number(showSection.querySelectorAll('input[type=range]')[2].value);
+    });
+    shuffleInput.addEventListener('input', () => {
+        show.shuffle = Number(shuffleInput.value);
         scheduleShuffle();
     });
 
@@ -658,8 +663,8 @@
         scheduleShuffle();
     }
 
-    // Chaos swaps the target and tint on a timer, using the same path as Random shape so the
-    // procedural targets are in the rotation as well as the ball and spear.
+    // Chaos swaps the target and tint on a timer, through the same path as Random shape, so
+    // the procedural targets are in the rotation as well as the ball and spear.
     function scheduleShuffle() {
         window.clearTimeout(shuffleTimer);
         if (show.mode !== 'visualizer' || show.preset !== 'chaos') return;
@@ -680,6 +685,9 @@
         for (const [key, button] of showModeButtons) button.classList.toggle('on', key === show.mode);
         showPresetSelect.value = show.preset;
         showNote.textContent = SHOW_NOTES[show.mode];
+        controls.get('SHOW_PULSE').set(show.pulse);
+        controls.get('SHOW_DRIFT').set(show.drift);
+        controls.get('SHOW_SHUFFLE').set(show.shuffle);
         const api = playerApi();
         if (api && api.show && api.show.reset) api.show.reset();
     }

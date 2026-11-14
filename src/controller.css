@@ -1,0 +1,345 @@
+/*  Holographic Particle Accelerator — Controller
+ *  Jackrabbit72380
+ *  2026
+ */
+
+:root {
+    --ink: #05070a;
+    --panel: #0b1118;
+    --panel-2: #0e1620;
+    --line: #1b2836;
+    --text: #c8d9e8;
+    --dim: #7c92a6;
+    --accent: #5fc8ff;
+    --accent-2: #b48cff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: var(--ink);
+    color: var(--text);
+    font: 400 13px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+}
+
+/*--- Top bar ---*/
+
+.bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 52px;
+    padding: 0 14px;
+    background: linear-gradient(180deg, #0d151e, #0a1118);
+    border-bottom: 1px solid var(--line);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.led {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent), 0 0 22px rgba(95, 200, 255, 0.5);
+    animation: pulse 2.6s ease-in-out infinite;
+    flex: none;
+}
+
+@keyframes pulse {
+    50% { opacity: 0.4; }
+}
+
+h1 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+h1 em {
+    font-style: normal;
+    color: var(--accent);
+}
+
+.bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: none;
+}
+
+.status {
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status.busy {
+    color: var(--accent);
+}
+
+.status.bad {
+    color: #ff8080;
+}
+
+.ghost {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/*--- Layout ---*/
+
+.layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    height: calc(100% - 52px);
+}
+
+.stage-wrap {
+    position: relative;
+    background: #000;
+    min-width: 0;
+}
+
+#stage {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.hint {
+    position: absolute;
+    left: 50%;
+    top: 16px;
+    transform: translateX(-50%);
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(8, 14, 20, 0.72);
+    border: 1px solid var(--line);
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 220ms ease;
+    white-space: nowrap;
+}
+
+.stage-wrap.dragging .hint,
+.hint.show {
+    opacity: 1;
+}
+
+.stage-wrap.dragging {
+    outline: 2px dashed var(--accent);
+    outline-offset: -10px;
+}
+
+/*--- Panel ---*/
+
+.panel {
+    background: var(--panel);
+    border-left: 1px solid var(--line);
+    overflow-y: auto;
+    padding-bottom: 40px;
+}
+
+.section {
+    border-bottom: 1px solid var(--line);
+    padding: 12px 14px 14px;
+}
+
+.section > h2 {
+    margin: 0 0 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.row:last-child {
+    margin-bottom: 0;
+}
+
+.row .label {
+    color: var(--text);
+    font-size: 12px;
+}
+
+.row .value {
+    color: var(--accent);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.row.wide {
+    grid-template-columns: 1fr;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    outline: none;
+    margin: 4px 0 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #eaf6ff;
+    border: 2px solid #0a1219;
+    box-shadow: 0 0 8px rgba(95, 200, 255, 0.8);
+    cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #eaf6ff;
+    border: 2px solid #0a1219;
+    cursor: pointer;
+}
+
+select,
+input[type="text"],
+input[type="color"] {
+    width: 100%;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 8px;
+    font: inherit;
+}
+
+input[type="color"] {
+    padding: 2px;
+    height: 30px;
+    cursor: pointer;
+}
+
+select:focus,
+input[type="text"]:focus {
+    outline: 1px solid var(--accent);
+    border-color: var(--accent);
+}
+
+.buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+button:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+button.on {
+    border-color: var(--accent);
+    color: #041018;
+    background: var(--accent);
+    font-weight: 600;
+}
+
+button.danger.on {
+    background: var(--accent-2);
+    border-color: var(--accent-2);
+}
+
+/*--- Meter ---*/
+
+.meter {
+    height: 6px;
+    border-radius: 3px;
+    background: #0a1219;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.meter > i {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 60ms linear;
+}
+
+.note {
+    color: var(--dim);
+    font-size: 11px;
+    margin-top: 8px;
+    line-height: 1.45;
+}

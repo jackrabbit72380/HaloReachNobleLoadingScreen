@@ -1,0 +1,63 @@
+/*  Holographic Particle Accelerator
+ *  Jackrabbit72380
+ *  2026
+ */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: #05070a;
+    overflow: hidden;
+}
+
+#canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+#caption {
+    --caption-scale: 1;
+    position: absolute;
+    left: 50%;
+    bottom: 7%;
+    width: min(88vw, 1100px);
+    text-align: center;
+    font: 600 calc(clamp(12px, 1.9vw, 30px) * var(--caption-scale))/1.2 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: #d6ecff;
+    text-shadow: 0 0 18px rgba(120, 190, 255, 0.55);
+    opacity: 0;
+    transform: translate(-50%, 12px);
+    transition: opacity 850ms ease, transform 850ms ease;
+    pointer-events: none;
+    user-select: none;
+}
+
+#caption.visible {
+    opacity: 0.95;
+    transform: translate(-50%, 0);
+}
+
+#loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8fa9ba;
+    font: 400 13px/1.6 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    transition: opacity 600ms ease;
+}
+
+#loading.hidden {
+    opacity: 0;
+}

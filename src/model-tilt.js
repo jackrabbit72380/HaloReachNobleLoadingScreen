@@ -69,9 +69,9 @@
 
   const style = document.createElement('style');
   style.textContent = [
-    '.tilt-row{align-items:center;gap:8px}',
-    '.tilt-row input[type="checkbox"]{width:16px;height:16px;margin:0;flex:none;cursor:pointer;accent-color:#8fd8ff}',
-    '.tilt-row label{cursor:pointer;font-size:12px;opacity:.85}'
+    '.tilt-row{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:2px 0 8px}',
+    '.tilt-row input[type="checkbox"]{width:16px;height:16px;margin:0;flex:0 0 auto;cursor:pointer;accent-color:#8fd8ff}',
+    '.tilt-row label{margin:0;flex:1 1 auto;text-align:left;font-size:12px;cursor:pointer;opacity:.85}'
   ].join('');
   document.head.appendChild(style);
 

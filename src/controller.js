@@ -538,12 +538,42 @@
     // for. The slider reads in turns per second — you can picture a turn, not a radian — and
     // converts on the way to the engine, which works in radians.
     addRange(cameraSection, {
-        key: 'ROTATE_SPEED', label: 'Spin speed', min: 0, max: 0.5, step: 0.002,
+        key: 'ROTATE_SPEED', label: 'Spin speed', min: -0.5, max: 0.5, step: 0.002,
         value: Number((0.40 / (Math.PI * 2)).toFixed(3)),
         format: (v) => `${v.toFixed(3)} turns/s`,
         toConfig: (v) => v * Math.PI * 2,
         fromConfig: (v) => Number((v / (Math.PI * 2)).toFixed(3))
     });
+
+    // Which axis the endless turn goes round. Y is the turntable a ball or a spear wants; X
+    // tumbles the object end over end and Z rolls it, which is what a flat map lying on its side
+    // needs if you want it to swing left to right rather than turn on the spot. Spin speed can be
+    // negative too, so the turn can go the other way.
+    const axisRow = el('div', 'buttons');
+    axisRow.style.marginTop = '6px';
+    cameraSection.appendChild(axisRow);
+
+    const axisButtons = new Map();
+    for (const [axis, label] of [['y', 'Y — turntable'], ['x', 'X — tumble'], ['z', 'Z — roll']]) {
+        const button = el('button', axis === 'y' ? 'on' : '', label);
+        button.type = 'button';
+        button.addEventListener('click', () => setSpinAxis(axis));
+        axisRow.appendChild(button);
+        axisButtons.set(axis, button);
+    }
+
+    function syncAxisButtons(axis) {
+        for (const [key, button] of axisButtons) button.classList.toggle('on', key === axis);
+    }
+
+    function setSpinAxis(axis) {
+        const api = playerApi();
+        if (api) api.set({ SPIN_AXIS: axis });
+        syncAxisButtons(axis);
+        setStatus(`turning about ${axis.toUpperCase()}`, '');
+    }
+
+    controls.set('SPIN_AXIS', { set: syncAxisButtons });
 
     addRange(cameraSection, {
         key: 'ZOOM', label: 'Zoom', min: 0.35, max: 6, step: 0.05, value: 1,
@@ -672,7 +702,7 @@
     });
     padRow.appendChild(headOnButton);
 
-    cameraSection.appendChild(el('div', 'note', 'The assembly eases to the settle angle, then turns on forever from there. The wheel over the particle window zooms too, and inside view puts the camera in among the particles.'));
+    cameraSection.appendChild(el('div', 'note', 'The assembly eases to the settle angle, then turns on forever from there. The three turn buttons pick which axis that goes round, and a negative spin speed turns it the other way. The wheel over the particle window zooms too, and inside view puts the camera in among the particles.'));
     cameraSection.appendChild(el('div', 'note', 'Tilt 0° looks at the object dead level; positive pitches the top away from you. The pad slides the view, and the arrow keys in the particle window do the same — hold shift for bigger steps. Head-on puts the tilt and the pan back to zero.'));
     cameraSection.appendChild(el('div', 'note', 'Pivot is the point the turn goes around. 0 is the target’s centre, which is what the built-in shapes use; an imported model is centred on its bounding box, so a typical one wants its base at about −2 on Y — Pivot: base finds it from the model itself.'));
 
@@ -680,7 +710,7 @@
     window.setTimeout(() => {
         const api = playerApi();
         if (!api || !api.config) return;
-        for (const key of ['TILT', 'PIVOT_X', 'PIVOT_Y', 'PIVOT_Z', 'PAN_X', 'PAN_Y']) {
+        for (const key of ['TILT', 'PIVOT_X', 'PIVOT_Y', 'PIVOT_Z', 'SPIN_AXIS', 'PAN_X', 'PAN_Y']) {
             if (key in api.config) controls.get(key).set(api.config[key]);
         }
     }, 900);

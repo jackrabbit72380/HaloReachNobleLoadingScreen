@@ -51,8 +51,13 @@
       // Bands run diagonally over the surface — twice round the sphere and twice pole to pole —
       // so a loud band travels across it as a wave instead of lifting one smooth shell. The
       // small jitter lets neighbouring points answer neighbouring bands, which is the ripple.
-      const turn = (((lon * 2 + lat * 2.5 + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-      const band = (turn / (Math.PI * 2)) * 63.999 + (Math.random() - 0.5) * 2.5;
+      const sweep = ((((lon * 2 + lat * 2.5) / (Math.PI * 2)) % 1) + 1) % 1;
+
+      // Music keeps its energy in the low bands, and the analyser hands over nothing at all in
+      // the top ones, so the bands are laid out by weight rather than evenly: the bass and low
+      // mids own three quarters of the surface and the highs ripple over the rest. Shared out
+      // evenly, only a narrow stripe answers a track and the ball just sits there.
+      const band = 63.999 * Math.pow(sweep, 1.9) + (Math.random() - 0.5) * 2;
 
       points.push({
         x: x * shell,
@@ -62,7 +67,7 @@
         band: Math.max(0, Math.min(63.999, band)),
         // Round the equator a band pushes hardest and round the poles least, so the sphere
         // swells into lobes. The three long, slow waves keep the surface uneven as it moves.
-        height: (0.30 + 0.45 * girth) * (0.7 + 0.3 * Math.cos(lon * 3 + lat * 2))
+        height: (0.24 + 0.36 * girth) * (0.75 + 0.25 * Math.cos(lon * 3 + lat * 2))
       });
     }
 

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="author" content="Jackrabbit72380">
     <title>Holographic Particle Accelerator</title>
+    <link rel="stylesheet" type="text/css" href="src/controller.css">
     <link rel="stylesheet" type="text/css" href="src/style.css">
   </head>
 
@@ -19,6 +20,28 @@
 
     <!-- Boot status, hidden on first frame -->
     <div id="loading">Assembling</div>
+
+    <!-- The controller, docked down the right-hand side. Home opens and closes it. -->
+    <aside id="dock" class="dock" aria-hidden="true" aria-label="Controller">
+      <div class="dock-bar">
+        <span id="status" class="status" role="status">ready</span>
+        <button id="reset" class="ghost" type="button">Reset</button>
+      </div>
+      <div class="wrap" id="wrap">
+        <!-- controller.js binds these; there is no second window here, so they stay hidden -->
+        <div hidden>
+          <button id="open-player" type="button">Open particle window</button>
+          <button id="focus-player" type="button">Bring to front</button>
+          <button id="close-player" type="button">Close</button>
+          <p class="note" id="connection"></p>
+        </div>
+        <div id="sections"></div>
+      </div>
+    </aside>
+
+    <div id="dock-hint" role="button" tabindex="0">Home — controls</div>
+
+    <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
 
     <!-- Engine -->
     <script src="src/engine.js"></script>
@@ -34,6 +57,15 @@
 
     <!-- HPA.exportModel(): the assembled target as a downloadable model -->
     <script src="src/export.js"></script>
+
+    <!-- HPA.importModel(): a Blender mesh (OBJ / PLY) as the target -->
+    <script src="src/import.js"></script>
+
+    <!-- Docks the panel into this window; runs before controller.js, which needs it -->
+    <script src="src/dock.js"></script>
+
+    <!-- The whole control panel -->
+    <script src="src/controller.js"></script>
 
   </body>
 

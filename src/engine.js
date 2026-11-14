@@ -22,7 +22,7 @@
     /*--- Configuration ---*/
 
     const CONFIG = {
-        MASK_SRC: 'ball',            // 'ball', 'spear' or any image URL / data URL
+        MASK_SRC: 'ball',            // 'ball', 'spear', 'cube' or an image URL / data URL
         MODE: 'shape',               // 'shape' | 'equalizer'
         VIEW: 'orbit',               // 'orbit' | 'inside'
         ZOOM: 1.0,
@@ -351,6 +351,7 @@
     async function sampleMask(source) {
         if (source === 'ball') return ballPoints();
         if (source === 'spear') return spearPoints();
+        if (source === 'cube') return cubePoints();
 
         const image = await loadImage(source);
         const width = Math.max(16, Math.round(CONFIG.SAMPLE_WIDTH));
@@ -454,6 +455,70 @@
             const y = Math.cos(phi) * shell;
             const z = Math.sin(phi) * Math.sin(theta) * shell;
             add(x, y, z, waitFor(x, y, z));
+        }
+
+        return points;
+    }
+
+    // A real 3D cube: six flat faces sampled in three dimensions, with the twelve edges and
+    // eight corners built up denser, so it holds its shape from every angle. A flat drawing of a
+    // cube (the old canvas mask) only ever faces the camera; this one can be walked round.
+    function cubePoints() {
+        const points = [];
+        const half = CONFIG.MASK_HEIGHT * 0.45;
+
+        const clamp01 = (value) => Math.max(0, Math.min(1, value));
+        const add = (x, y, z, wait) => points.push({ x, y, z, wait: clamp01(wait) });
+        const diagonal = half * Math.sqrt(3);
+        const waitFor = (x, y, z) => clamp01(Math.hypot(x, y, z) / diagonal * 0.78 + Math.random() * 0.15);
+
+        // The six faces: the axis the face is perpendicular to, a side, and the two axes that
+        // span it. Points sit on the plane, give or take a hair so the surface has some grain.
+        const face = (axis, sign, count) => {
+            for (let i = 0; i < count; i++) {
+                const u = (Math.random() * 2 - 1) * half;
+                const v = (Math.random() * 2 - 1) * half;
+                const fixed = sign * half + (Math.random() - 0.5) * 0.012 * sign;
+                const x = axis === 0 ? fixed : u;
+                const y = axis === 1 ? fixed : axis === 0 ? u : v;
+                const z = axis === 2 ? fixed : v;
+                add(x, y, z, waitFor(x, y, z));
+            }
+        };
+
+        for (let axis = 0; axis < 3; axis++) {
+            face(axis, 1, 1500);
+            face(axis, -1, 1500);
+        }
+
+        // Edges, where two faces meet, and the eight corners: denser, so the silhouette stays
+        // crisp instead of going soft where the surfaces run out of points.
+        for (let axis = 0; axis < 3; axis++) {
+            for (const a of [-1, 1]) {
+                for (const b of [-1, 1]) {
+                    for (let i = 0; i < 220; i++) {
+                        const along = (Math.random() * 2 - 1) * half;
+                        const coords = [0, 0, 0];
+                        coords[axis] = along;
+                        coords[(axis + 1) % 3] = a * half;
+                        coords[(axis + 2) % 3] = b * half;
+                        add(coords[0], coords[1], coords[2], waitFor(coords[0], coords[1], coords[2]));
+                    }
+                }
+            }
+        }
+
+        for (const sx of [-1, 1]) {
+            for (const sy of [-1, 1]) {
+                for (const sz of [-1, 1]) {
+                    for (let i = 0; i < 40; i++) {
+                        const x = sx * half + (Math.random() - 0.5) * 0.03;
+                        const y = sy * half + (Math.random() - 0.5) * 0.03;
+                        const z = sz * half + (Math.random() - 0.5) * 0.03;
+                        add(x, y, z, waitFor(x, y, z));
+                    }
+                }
+            }
         }
 
         return points;
@@ -880,7 +945,7 @@
                 return;
             }
             if (!MediaRecorder.isTypeSupported(mime)) {
-                reject(new Error(mime + ' is not supported in this browser.'));
+                reject(new Error('MIME type ' + mime + ' is not supported in this browser.'));
                 return;
             }
 

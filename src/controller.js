@@ -193,6 +193,7 @@
         eqOn = config.MODE === 'equalizer';
         eqButton.classList.toggle('on', eqOn);
         syncViewButtons(config.VIEW);
+        syncInfinite(!config.LOOP);
     }
 
     function updateConnection() {
@@ -575,6 +576,34 @@
 
     controls.set('SPIN_AXIS', { set: syncAxisButtons });
 
+    // "Turn forever": one rotation, no hold, no fade, no rebuild. That is the Timing section's
+    // rebuild loop seen from the other end, so this is a checkbox for LOOP: false and the two
+    // controls are kept in step rather than being allowed to disagree.
+    const infiniteRow = el('div', 'buttons');
+    infiniteRow.style.marginTop = '6px';
+    cameraSection.appendChild(infiniteRow);
+
+    const infiniteButton = el('button', '', 'Infinite rotation — no rebuild');
+    infiniteButton.type = 'button';
+    infiniteButton.setAttribute('role', 'checkbox');
+    infiniteButton.setAttribute('aria-checked', 'false');
+    infiniteRow.appendChild(infiniteButton);
+
+    function syncInfinite(on) {
+        infiniteButton.classList.toggle('on', !!on);
+        infiniteButton.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+
+    infiniteButton.addEventListener('click', () => {
+        const next = !infiniteButton.classList.contains('on');
+        syncInfinite(next);
+        set({ LOOP: !next });
+        controls.get('LOOP').set(!next);
+        setStatus(next ? 'turning forever — no rebuild' : 'rebuilding on a loop', '');
+    });
+
+    controls.set('INFINITE_ROTATION', { set: syncInfinite });
+
     addRange(cameraSection, {
         key: 'ZOOM', label: 'Zoom', min: 0.35, max: 6, step: 0.05, value: 1,
         format: (v) => `${v.toFixed(2)}×`
@@ -705,12 +734,13 @@
     cameraSection.appendChild(el('div', 'note', 'The assembly eases to the settle angle, then turns on forever from there. The three turn buttons pick which axis that goes round, and a negative spin speed turns it the other way. The wheel over the particle window zooms too, and inside view puts the camera in among the particles.'));
     cameraSection.appendChild(el('div', 'note', 'Tilt 0° looks at the object dead level; positive pitches the top away from you. The pad slides the view, and the arrow keys in the particle window do the same — hold shift for bigger steps. Head-on puts the tilt and the pan back to zero.'));
     cameraSection.appendChild(el('div', 'note', 'Pivot is the point the turn goes around. 0 is the target’s centre, which is what the built-in shapes use; an imported model is centred on its bounding box, so a typical one wants its base at about −2 on Y — Pivot: base finds it from the model itself.'));
+    cameraSection.appendChild(el('div', 'note', 'Infinite rotation assembles the target once and then just turns it: no hold, no fade, no rebuild. It is the same setting as Timing → Rebuild loop, off.'));
 
     // A running particle window is the truth; show what it is actually set to.
     window.setTimeout(() => {
         const api = playerApi();
         if (!api || !api.config) return;
-        for (const key of ['TILT', 'PIVOT_X', 'PIVOT_Y', 'PIVOT_Z', 'SPIN_AXIS', 'PAN_X', 'PAN_Y']) {
+        for (const key of ['TILT', 'PIVOT_X', 'PIVOT_Y', 'PIVOT_Z', 'SPIN_AXIS', 'LOOP', 'PAN_X', 'PAN_Y']) {
             if (key in api.config) controls.get(key).set(api.config[key]);
         }
     }, 900);
@@ -916,6 +946,16 @@
     timingButtons.style.marginTop = '10px';
     timingSection.appendChild(timingButtons);
     addToggle(timingButtons, { key: 'LOOP', label: 'Rebuild loop', value: true });
+
+    // The Camera section's Infinite rotation checkbox is the same key, so switching the loop on
+    // or off here has to move it too.
+    const loopControl = controls.get('LOOP');
+    controls.set('LOOP', {
+        set(value) {
+            loopControl.set(value);
+            syncInfinite(!value);
+        }
+    });
 
     timingSection.appendChild(el('div', 'note', 'With the loop off the shape assembles once and then stays assembled, turning forever — hold, fade and rebuild are skipped.'));
 

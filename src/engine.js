@@ -839,6 +839,7 @@
                 ? equalizerPoints()
                 : await sampleMask(CONFIG.MASK_SRC);
             const next = buildBuffer(points);
+            next.points = points;      // kept on the CPU so the model can be exported
             disposeScene(scene);
             scene = next;
             if (restart) startedAt = 0;
@@ -924,6 +925,9 @@
         },
         capture,
         record,
+        geometry() {
+            return scene && scene.points ? scene.points : [];
+        },
         snapshot() {
             return {
                 count: scene ? scene.count : 0,

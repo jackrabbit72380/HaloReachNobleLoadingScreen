@@ -27,6 +27,8 @@
         VIEW: 'orbit',               // 'orbit' | 'inside'
         ZOOM: 1.0,
         ROTATE_SPEED: 0.40,          // radians per second once the shape is assembled
+        STOP_ANGLE: 0,               // degrees: the yaw the assembly settles at
+        LOOP: true,                  // false assembles once and rotates forever
         EQ_HEIGHT: 2.2,              // world height a full-scale spectrum band reaches
         SAMPLE_WIDTH: 260,
         DUST_PARTICLES: 6000,
@@ -626,6 +628,8 @@
     let spectrum = new Float32Array(64);
     let projection = null;
     let startedAt = 0;
+    let spinAccum = 0;
+    let lastTick = 0;
     let captionVisible = false;
     let pixelScale = 1;
 
@@ -669,11 +673,20 @@
         const elapsed = (now - startedAt) * TIME_SCALE;
         const seconds = elapsed / 1000;
 
+        // The endless turn is accumulated rather than derived from the clock, so it never
+        // jumps or pauses when a cycle rebuilds the shape, and it keeps going while LOOP
+        // is off (assemble once, then turn forever).
+        const frameSeconds = lastTick ? Math.min(0.1, (now - lastTick) / 1000) * TIME_SCALE : 0;
+        lastTick = now;
+        if (seconds > CONFIG.ASSEMBLY_MS / 1000) spinAccum += frameSeconds * CONFIG.ROTATE_SPEED;
+
         const CYCLE = cycleLength();
         const cycleTime = elapsed % CYCLE;
-        const progress = Math.min(cycleTime / Math.max(1, CONFIG.ASSEMBLY_MS), 1);
+        const progress = CONFIG.LOOP
+            ? Math.min(cycleTime / Math.max(1, CONFIG.ASSEMBLY_MS), 1)
+            : Math.min(elapsed / Math.max(1, CONFIG.ASSEMBLY_MS), 1);
 
-        const fadeOut = cycleTime > CYCLE - CONFIG.FADE_MS
+        const fadeOut = CONFIG.LOOP && cycleTime > CYCLE - CONFIG.FADE_MS
             ? Math.max(0, (CYCLE - cycleTime) / Math.max(1, CONFIG.FADE_MS))
             : 1;
         const fadeIn = Math.min(elapsed / Math.max(1, CONFIG.FADE_IN_MS), 1);
@@ -703,7 +716,10 @@
 
         const spinEase = progress * progress * (3.0 - 2.0 * progress);
         const settle = 1 - spinEase;
-        const spin = settle * Math.PI * 2 * CONFIG.SPIN_TURNS + seconds * CONFIG.ROTATE_SPEED;
+        // Assembly winds the shape in and eases it to STOP_ANGLE; from there the endless
+        // turn takes over, so the angle it finishes coming together at is yours to pick.
+        const stop = (Number(CONFIG.STOP_ANGLE) || 0) * Math.PI / 180;
+        const spin = stop + settle * Math.PI * 2 * CONFIG.SPIN_TURNS + spinAccum;
 
         const tilt = eqMode ? 0 : 0.42 + settle * 0.5 * Math.sin(seconds * 0.7);
         const model = rotation3D(spin, tilt, CONFIG.MASK_LIFT);

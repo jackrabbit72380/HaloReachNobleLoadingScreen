@@ -338,8 +338,8 @@
     sourceSection.appendChild(modelInput);
 
     // Every name here is a target the engine builds or holds in 3D, or — the glyph — an image
-    // file it samples as a picture. The panel just passes the name along; src/shapes3d.js is
-    // where the procedural ones live.
+    // file it samples as a picture. The panel just passes the name along; the engine builds
+    // every one of them itself.
     const presetRow = el('div', 'row wide');
     presetRow.style.marginTop = '10px';
     const presetSelect = el('select');
@@ -561,6 +561,68 @@
         format: (v) => `${v.toFixed(0)}°`
     });
 
+    // Where the object turns from, in world units out from its middle. An imported model is
+    // centred on its bounding box, which is rarely where you want the axis: a figure reads
+    // right spinning on its feet, a sword on its hilt. Three sliders put the axis anywhere,
+    // and the two buttons below read the target's own points instead of making you guess.
+    addRange(cameraSection, {
+        key: 'PIVOT_X', label: 'Pivot X', min: -5, max: 5, step: 0.05, value: 0,
+        format: (v) => v.toFixed(2)
+    });
+
+    addRange(cameraSection, {
+        key: 'PIVOT_Y', label: 'Pivot Y', min: -5, max: 5, step: 0.05, value: 0,
+        format: (v) => v.toFixed(2)
+    });
+
+    addRange(cameraSection, {
+        key: 'PIVOT_Z', label: 'Pivot Z', min: -5, max: 5, step: 0.05, value: 0,
+        format: (v) => v.toFixed(2)
+    });
+
+    const pivotRow = el('div', 'buttons');
+    pivotRow.style.marginTop = '6px';
+    cameraSection.appendChild(pivotRow);
+
+    const pivotCentreButton = el('button', '', 'Pivot: centre');
+    const pivotBaseButton = el('button', '', 'Pivot: base');
+    pivotCentreButton.type = 'button';
+    pivotBaseButton.type = 'button';
+    pivotRow.append(pivotCentreButton, pivotBaseButton);
+
+    function setPivot(x, y, z) {
+        const api = playerApi();
+        if (api) api.set({ PIVOT_X: x, PIVOT_Y: y, PIVOT_Z: z });
+        controls.get('PIVOT_X').set(x);
+        controls.get('PIVOT_Y').set(y);
+        controls.get('PIVOT_Z').set(z);
+    }
+
+    pivotCentreButton.addEventListener('click', () => setPivot(0, 0, 0));
+
+    // Base asks the engine for the points it is actually turning — whatever the target is — and
+    // drops the axis on the floor of their bounding box, centred in X and Z, so the model turns
+    // where it stands instead of round its waist.
+    pivotBaseButton.addEventListener('click', () => {
+        const api = playerApi();
+        if (!api) return needPlayer();
+        const points = api.geometry ? api.geometry() : [];
+        if (!points.length) return;
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, minZ = Infinity, maxZ = -Infinity;
+        for (const point of points) {
+            if (point.x < minX) minX = point.x;
+            if (point.x > maxX) maxX = point.x;
+            if (point.y < minY) minY = point.y;
+            if (point.z < minZ) minZ = point.z;
+            if (point.z > maxZ) maxZ = point.z;
+        }
+
+        const round = (value) => Number(value.toFixed(2));
+        setPivot(round((minX + maxX) / 2), round(minY), round((minZ + maxZ) / 2));
+        setStatus('turning on the base', '');
+    });
+
     addRange(cameraSection, {
         key: 'PAN_X', label: 'Pan left / right', min: -6, max: 6, step: 0.1, value: 0,
         format: (v) => v.toFixed(1)
@@ -612,12 +674,13 @@
 
     cameraSection.appendChild(el('div', 'note', 'The assembly eases to the settle angle, then turns on forever from there. The wheel over the particle window zooms too, and inside view puts the camera in among the particles.'));
     cameraSection.appendChild(el('div', 'note', 'Tilt 0° looks at the object dead level; positive pitches the top away from you. The pad slides the view, and the arrow keys in the particle window do the same — hold shift for bigger steps. Head-on puts the tilt and the pan back to zero.'));
+    cameraSection.appendChild(el('div', 'note', 'Pivot is the point the turn goes around. 0 is the target’s centre, which is what the built-in shapes use; an imported model is centred on its bounding box, so a typical one wants its base at about −2 on Y — Pivot: base finds it from the model itself.'));
 
     // A running particle window is the truth; show what it is actually set to.
     window.setTimeout(() => {
         const api = playerApi();
         if (!api || !api.config) return;
-        for (const key of ['TILT', 'PAN_X', 'PAN_Y']) {
+        for (const key of ['TILT', 'PIVOT_X', 'PIVOT_Y', 'PIVOT_Z', 'PAN_X', 'PAN_Y']) {
             if (key in api.config) controls.get(key).set(api.config[key]);
         }
     }, 900);

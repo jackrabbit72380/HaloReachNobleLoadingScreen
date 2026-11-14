@@ -22,7 +22,7 @@
     /*--- Configuration ---*/
 
     const CONFIG = {
-        MASK_SRC: 'ball',            // 'ball', 'spear', 'cube', 'mesh' or an image URL / data URL
+        MASK_SRC: 'ball',            // a shape name, 'mesh', or an image URL / data URL
         MODE: 'shape',               // 'shape' | 'equalizer'
         VIEW: 'orbit',               // 'orbit' | 'inside'
         ZOOM: 1.0,
@@ -338,6 +338,10 @@
 
     /*--- Mask Sampling ---*/
 
+    // Shape generators live here by name — ball, spear and cube are built below, and
+    // src/shapes3d.js registers the rest (torus, atom, helix, pyramid, star) on the same table.
+    const SHAPES = {};
+
     function loadImage(source) {
         return new Promise((resolve, reject) => {
             const image = new Image();
@@ -349,9 +353,7 @@
     }
 
     async function sampleMask(source) {
-        if (source === 'ball') return ballPoints();
-        if (source === 'spear') return spearPoints();
-        if (source === 'cube') return cubePoints();
+        if (SHAPES[source]) return SHAPES[source]();
         if (source === 'mesh') return cloudPoints || ballPoints();
 
         const image = await loadImage(source);
@@ -629,6 +631,11 @@
 
         return points;
     }
+
+    // Registered last, once all three are defined, so the table is never half-built.
+    SHAPES.ball = ballPoints;
+    SHAPES.spear = spearPoints;
+    SHAPES.cube = cubePoints;
 
     /*--- Geometry ---*/
 
@@ -977,6 +984,7 @@
 
     window.HPA = {
         config: CONFIG,
+        shapes: SHAPES,
         ready,
         rebuild: () => rebuild(true),
         setMask: (src) => { CONFIG.MASK_SRC = src; return rebuild(true); },

@@ -87,6 +87,11 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 | **Settle angle** | The yaw the assembly comes to rest at, in degrees. |
 | **Rebuild loop** | On: assemble, hold, fade, rebuild forever. Off: assemble once and keep turning. |
 
+That accumulation is also why **Reset** has to zero it: putting the settle angle back is not
+enough on its own, because the old offset would be added on top — 120° setted plus two radians
+of turn is not the same pose as a fresh page. `HPA.reset()` therefore calls `HPA.resetRotation()`,
+and the assembly starts again from the settle angle you shipped with.
+
 ## Camera
 
 | Control | What it does |
@@ -152,7 +157,8 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 
 **Reset** in the top-right puts every setting back to the shipped defaults — in the engine and
 in the panel — and starts the assembly over: ball target, the shipped caption, 0.064 turns/s,
-settle angle 0°, tilt 0°, no pan, loop on, tint `#a1d6ff`, show mode off.
+settle angle 0°, tilt 0°, no pan, loop on, tint `#a1d6ff`, show mode off, and the accumulated turn
+back to zero so the pose is the fresh-page one rather than that angle plus whatever it had turned.
 
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
@@ -216,6 +222,7 @@ HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly sett
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
 HPA.setMask('ball');                                // 'ball', 'spear' or an image URL / data URL
 HPA.rebuild();                                      // resample and restart
+HPA.resetRotation();                                // endless turn back to the settle angle
 HPA.reset();                                        // shipped settings back, assemble again
 HPA.show({ mode: 'rainbow' });                      // 'off' | 'inside' | 'visualizer' | 'rainbow'
 HPA.show({ mode: 'visualizer', preset: 'chaos', pulse: 0.6, drift: 0.4 });
@@ -227,7 +234,7 @@ HPA.setAudio(0.7);                                  // 0..1, drives size and glo
 HPA.setSpectrum(bands);                             // Float32Array(64), 0..1 per band
 HPA.capture('image/png');                           // data URL
 HPA.record({ ms: 5000, mime: 'video/webm' });       // Promise<Blob>
-HPA.snapshot();                                     // counts + current config
+HPA.snapshot();                                     // counts, config and the turn so far
 ```
 
 `ROTATE_SPEED` is radians per second in the API; the panel's **Spin speed** slider shows the same

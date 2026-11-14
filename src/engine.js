@@ -26,6 +26,10 @@
         MODE: 'shape',               // 'shape' | 'equalizer'
         VIEW: 'orbit',               // 'orbit' | 'inside'
         ZOOM: 1.0,
+        TILT: 0,                     // degrees the model is pitched; 0 looks at it head-on
+        PAN_X: 0,                    // view offset left/right, world units
+        PAN_Y: 0,                    // view offset up/down, world units
+        SWAY: 0,                     // 0..1 slow pitch wobble while the shape assembles
         ROTATE_SPEED: 0.40,          // radians per second once the shape is assembled
         STOP_ANGLE: 0,               // degrees: the yaw the assembly settles at
         LOOP: true,                  // false assembles once and rotates forever
@@ -765,7 +769,14 @@
                 distance
             ];
 
-        const view = lookAt(eye, [0, 0, 0], [0, 1, 0]);
+        // Panning moves the camera and its aim together, so the object slides across the
+        // frame instead of the camera swinging around it.
+        const panX = Number(CONFIG.PAN_X) || 0;
+        const panY = Number(CONFIG.PAN_Y) || 0;
+        eye[0] += panX;
+        eye[1] += panY;
+
+        const view = lookAt(eye, [panX, panY, 0], [0, 1, 0]);
 
         const spinEase = progress * progress * (3.0 - 2.0 * progress);
         const settle = 1 - spinEase;
@@ -774,7 +785,10 @@
         const stop = (Number(CONFIG.STOP_ANGLE) || 0) * Math.PI / 180;
         const spin = stop + settle * Math.PI * 2 * CONFIG.SPIN_TURNS + spinAccum;
 
-        const tilt = eqMode ? 0 : 0.42 + settle * 0.5 * Math.sin(seconds * 0.7);
+        // The pitch used to be a fixed lean; now it is yours, with the slow wobble kept as
+        // an optional extra so a head-on shape can stay dead level.
+        const sway = (Number(CONFIG.SWAY) || 0) * settle * 0.5 * Math.sin(seconds * 0.7);
+        const tilt = eqMode ? 0 : (Number(CONFIG.TILT) || 0) * Math.PI / 180 + sway;
         const model = rotation3D(spin, tilt, CONFIG.MASK_LIFT);
 
         gl.viewport(0, 0, canvas.width, canvas.height);
@@ -996,6 +1010,24 @@
     applyCaption();
     window.addEventListener('resize', resize);
     resize();
+
+    // Arrow keys nudge the view about: left/right/up/down move the object in the frame,
+    // shift makes each press bigger. The panel's pan sliders write the same two keys.
+    const ARROWS = {
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        ArrowUp: [0, 1],
+        ArrowDown: [0, -1]
+    };
+
+    window.addEventListener('keydown', (event) => {
+        const move = ARROWS[event.key];
+        if (!move || event.metaKey || event.ctrlKey) return;
+        event.preventDefault();
+        const step = event.shiftKey ? 1.0 : 0.25;
+        CONFIG.PAN_X = Math.max(-9, Math.min(9, (Number(CONFIG.PAN_X) || 0) + move[0] * step));
+        CONFIG.PAN_Y = Math.max(-9, Math.min(9, (Number(CONFIG.PAN_Y) || 0) + move[1] * step));
+    });
 
     // The particle window is its own page, so zooming here is what people reach for.
     canvas.addEventListener('wheel', (event) => {

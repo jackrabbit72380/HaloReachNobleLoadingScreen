@@ -12,6 +12,7 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | `index.html` | The animation (the particle window). Flags below. |
 | `controller.html` | The control panel, in its own window. |
 | `src/engine.js` | The whole engine — sampling, buffers, shaders, `window.HPA`. |
+| `src/relay.js` | Offers the particle window to its opener, so a reloaded panel re-attaches. |
 | `src/controller.js` | Panel logic and the link to the particle window. |
 | `src/style.css`, `src/controller.css` | Styling. |
 | `res/hpa-glyph.svg` | Default particle target (authored for this project). |
@@ -35,6 +36,12 @@ Both pages are same-origin, so the controller holds a live reference to the wind
 message protocol: when a slider moves, the controller mutates the engine's `CONFIG` in the other
 window and the next frame shows it. The panel re-checks the link every 700 ms, so closing the
 particle window shows *particle window closed* instead of silently doing nothing.
+
+Reloading the controller does not cost the animation. `src/relay.js` keeps offering the player
+window to whoever opened it, so the panel finds it again on the next check and says
+*reconnected — animation kept running*; **Open particle window** then reclaims that window as it
+stands rather than pointing it at `index.html` again. Only a genuinely missing window is opened
+fresh.
 
 If popups are blocked the panel says so — allow popups for the page, or open `index.html`
 yourself and use the API from that window.

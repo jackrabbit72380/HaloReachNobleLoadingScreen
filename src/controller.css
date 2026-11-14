@@ -120,6 +120,11 @@ h1 em {
     color: var(--accent);
 }
 
+button.ghost {
+    background: none;
+    cursor: pointer;
+}
+
 /*--- Layout ---*/
 
 .wrap {

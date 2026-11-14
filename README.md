@@ -13,6 +13,7 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | `controller.html` | The control panel, in its own window. |
 | `src/engine.js` | The whole engine — shapes, buffers, shaders, `window.HPA`. |
 | `src/relay.js` | Offers the particle window to its opener, so a reloaded panel re-attaches. |
+| `src/reset.js` | `HPA.reset()` — puts the shipped settings back. |
 | `src/controller.js` | Panel logic and the link to the particle window. |
 | `src/style.css`, `src/controller.css` | Styling. |
 | `res/hpa-glyph.svg` | Optional flat target (the default is the 3D ball). |
@@ -94,6 +95,10 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 | **Audio** | Microphone, system audio or a local audio file. Level drives size and brightness. |
 | **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it — captured inside the particle window. |
 
+**Reset** in the top-right puts every setting back to the shipped defaults — in the particle
+window and in the panel — and starts the assembly over: ball target, 0.40 rad/s, settle angle 0°,
+loop on, tint `#a1d6ff`.
+
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
 the frame.
@@ -127,6 +132,7 @@ HPA.set({ STOP_ANGLE: 90, LOOP: false });           // pose + endless turn
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
 HPA.setMask('ball');                                // 'ball', 'spear' or an image URL / data URL
 HPA.rebuild();                                      // resample and restart
+HPA.reset();                                        // shipped settings back, assemble again
 HPA.setAudio(0.7);                                  // 0..1, drives size and glow
 HPA.setSpectrum(bands);                             // Float32Array(64), 0..1 per band
 HPA.capture('image/png');                           // data URL

@@ -63,6 +63,10 @@
                 setStatus('connected', '');
                 break;
 
+            case 'state':
+                setStatus('connected', '');
+                break;
+
             case 'captured': {
                 const ext = (message.mime || 'image/png').includes('webp') ? 'webp' : 'png';
                 download(message.dataUrl, `holographic-particle-accelerator-${stamp()}.${ext}`);

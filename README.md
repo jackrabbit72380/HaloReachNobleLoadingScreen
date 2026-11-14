@@ -1,9 +1,9 @@
 # Holographic Particle Accelerator
 
 A WebGL2 particle animation. Thousands of points fly in from a sphere and assemble a real 3D
-ball — or a cube, a spear, or a mesh you bring in from Blender — then keep turning, hold, and
-rebuild. The controls live in a panel docked down the right-hand side of the same window:
-**Home** opens it, **Home** closes it.
+ball — or a cube, a torus, an atom, a helix, a pyramid, a star, a spear, or a mesh you bring in
+from Blender — then keep turning, hold, and rebuild. The controls live in a panel docked down the
+right-hand side of the same window: **Home** opens it, **Home** closes it.
 
 Written by **Jackrabbit72380**. No libraries, no build step.
 
@@ -11,7 +11,8 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | :--- | :--- |
 | `index.html` | The animation, with the controller docked on the right. Flags below. |
 | `controller.html` | The same panel in a window of its own, for a second screen. |
-| `src/engine.js` | The whole engine — shapes, buffers, shaders, `window.HPA`. |
+| `src/engine.js` | The whole engine — buffers, shaders, `window.HPA`. |
+| `src/shapes3d.js` | `HPA.shapes` — the 3D torus, atom, helix, pyramid and star. |
 | `src/dock.js` | Opens and closes the docked panel with Home, and bridges it to this window. |
 | `src/relay.js` | Offers the particle window to its opener, so a reloaded panel re-attaches. |
 | `src/reset.js` | `HPA.reset()` — puts the shipped settings back. |
@@ -20,7 +21,7 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | `src/import.js` | `HPA.importModel()` — a Blender OBJ / PLY mesh as 3D points. |
 | `src/controller.js` | Every section of the panel, in the order it appears. |
 | `src/style.css`, `src/controller.css` | Styling. |
-| `res/hpa-glyph.svg` | Optional flat target (the default is the 3D ball). |
+| `res/hpa-glyph.svg` | Optional flat target — a picture, so it stays flat. |
 
 ## Run
 
@@ -57,19 +58,30 @@ If popups are blocked the panel says so — allow popups for the page, or use th
 
 ## The shape
 
-The default target is a 3D ball: a sphere sampled on its surface with 24 meridians, 12 parallels
-and a skin of scattered points between them (~10 800 points, radius 2.07 in world units), so it
-reads as a globe rather than a fuzzy cloud.
+Every target is real geometry with depth, so each one can be walked round: turn it and the far
+side comes into view, **Tilt** it and you see the top, inside view puts the camera among its
+points. The one exception is a picture — an image you load, or the shipped glyph — which is flat
+by nature.
 
-Also built in: a real 3D cube, a 3D spear (pommel, ferrule, wrapped shaft, socket collar and a
-leaf blade along X), the flat glyph, five procedural 2D shapes, any PNG / JPEG / WebP / SVG you
-load, and any OBJ / PLY mesh from Blender.
+| Target | What it is |
+| :--- | :--- |
+| **Ball** | A sphere sampled on its surface — 24 meridians, 12 parallels and a skin between them (~10 800 points, radius 2.07). |
+| **Cube** | Six flat faces with the twelve edges and eight corners built up denser (~12 000 points, half-extent 2.07). |
+| **Torus** | A ring with a solid tube, points spread evenly over the surface (1.52 ring, 0.66 tube). |
+| **Atom** | A nucleus ball with three elliptical orbits in different planes, an electron riding each. |
+| **Helix** | A double helix along X, two strands with rungs between them. |
+| **Pyramid** | A square pyramid: four triangular sides, a base, ridges and corners denser. |
+| **Star** | A five-pointed star with real thickness — the rim drawn back to a point on each face. |
+| **Spear** | Pommel, ferrule, wrapped shaft, socket collar and a leaf blade along X. |
+| **Imported mesh** | A Blender OBJ / PLY turned into a point cloud over its triangles. |
+| **Glyph, any image** | A picture sampled as a silhouette — flat, with a thin slab of depth. |
 
-The cube is six flat faces sampled in three dimensions — 1 500 points a face — with the twelve
-edges and eight corners built up denser (~12 000 points, half-extent 2.07 like the ball's sphere),
-so it keeps its silhouette from every angle. It is geometry, not a picture of a cube: the old flat
-cube was a canvas drawing that only ever faced the camera, which is why it could not be walked
-round.
+All of them are sized against `MASK_HEIGHT` (4.6), so changing target does not change how big the
+thing is on screen, and all of them arrive from the middle outward as the assembly runs.
+
+The procedural ones live in `src/shapes3d.js` and register themselves on `HPA.shapes` — the table
+the engine samples a target from — so adding one is a function returning `[{x, y, z, wait}, …]`
+and one line at the bottom of that file.
 
 ### Title
 
@@ -85,7 +97,8 @@ spin carries it round forever. Because the angle is accumulated per frame rather
 the clock, it never jumps or pauses when a cycle rebuilds the shape.
 
 **Timing → Rebuild loop** off skips the hold, fade and rebuild entirely: assemble once, then
-rotate indefinitely. With the loop on, the same endless turn keeps running through each rebuild.
+rotate indefinitely — that is the "comes together, then turns forever" setting. With the loop on,
+the same endless turn keeps running through each rebuild.
 
 | Control | What it does |
 | :--- | :--- |
@@ -135,9 +148,9 @@ Three visualizer presets:
 | **Chaos** | Strong zoom, fast colour, and a new target and tint every **Shuffle every** seconds (4–40 s). |
 
 Shuffle picks shapes with the panel's own *Random shape* button, so the procedural targets are in
-the rotation as well as the ball, cube and spear. **Zoom pulse**, **Colour drift** and **Shuffle
-every** apply live; the level comes from whatever the Audio response section is listening to, and
-with no audio the visualizer still breathes on its own.
+the rotation as well as the ball and spear. **Zoom pulse**, **Colour drift** and **Shuffle every**
+apply live; the level comes from whatever the Audio response section is listening to, and with no
+audio the visualizer still breathes on its own.
 
 **Inside spin** and **Off** move the camera as well, so the **Camera** section's *Outside view* /
 *Inside view* buttons light up to match instead of keeping whatever they had.
@@ -149,7 +162,7 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 
 | Section | What it does |
 | :--- | :--- |
-| **Target** | Ball (3D), cube (3D), spear (3D), imported mesh (3D), the flat glyph, five procedural shapes, any image, or a mesh file — load, drop or paste, then **Rebuild**. |
+| **Target** | Ball, cube, torus, atom, helix, pyramid, star, spear, imported mesh — all 3D — plus the glyph or any image, load, drop or paste, then **Rebuild**. |
 | **Title** | The caption under the shape and its size. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
 | **Camera** | Spin speed, zoom, settle angle, tilt and pan, outside / inside view. |
@@ -172,11 +185,10 @@ the frame.
 
 ### Model export
 
-**Capture → Model (.obj)** or **Model (.ply)** writes the target you are looking at — ball, cube,
-spear, glyph, a procedural shape, a loaded image or an imported mesh — as a point cloud: one
-vertex per particle, world units, Y up, no faces. Blender imports either one in a single step
-(File → Import → Wavefront `.obj`, or New Stanford `.ply`); instance a sphere or metaball on the
-points to give them body.
+**Capture → Model (.obj)** or **Model (.ply)** writes the target you are looking at — any of the
+shapes, a loaded image or an imported mesh — as a point cloud: one vertex per particle, world
+units, Y up, no faces. Blender imports either one in a single step (File → Import → Wavefront
+`.obj`, or New Stanford `.ply`); instance a sphere or metaball on the points to give them body.
 
 There is no `.blend` export, and it is not a missing feature: a `.blend` is a dump of Blender's
 own memory plus the DNA schema of the version that wrote it, and no writer exists outside
@@ -191,10 +203,10 @@ faces) — and turns it into a **3D point cloud**, not a front-view picture.
 The mesh is centred on its bounding box and fitted to the same height as the built-in shapes, its
 triangles are sampled area-weighted up to ~18 000 points (so a Blender cube — 8 vertices, 12
 triangles — arrives as a solid cube rather than eight dots), and files with no faces come in as
-their vertices. Because the points keep their Z, the import behaves like the ball: turning shows
-the far side, **Tilt** shows the top, inside view walks into it, and **Capture → Model** writes the
-same points back out. Density, depth and point size behave as for any other target. The target
-list then reads **Imported mesh (3D)**.
+their vertices. Because the points keep their Z, the import behaves like the other shapes:
+turning shows the far side, **Tilt** shows the top, inside view walks into it, and **Capture →
+Model** writes the same points back out. Density, depth and point size behave as for any other
+target. The target list then reads **Imported mesh (3D)**.
 
 A `.blend` itself cannot be read here, for the same reason it cannot be written: it is Blender's
 memory image plus that version's DNA schema, and Blender now saves it zstd-compressed by default,
@@ -233,8 +245,9 @@ HPA.set({ TILT: 0, PAN_X: 0, PAN_Y: 0 });           // head-on, centred
 HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + endless turn
 HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly settles at
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
-HPA.setMask('cube');                                // 'ball', 'spear', 'cube', 'mesh' or an image URL
+HPA.setMask('torus');                               // a shape name, 'mesh', or an image URL
 HPA.setPointCloud(points);                          // any [{x, y, z}, …] as the target, in 3D
+HPA.shapes.spiral = () => points;                   // register a shape of your own
 HPA.rebuild();                                      // resample and restart
 HPA.resetRotation();                                // endless turn back to the settle angle
 HPA.reset();                                        // shipped settings back, assemble again

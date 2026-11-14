@@ -413,7 +413,12 @@
         format: (v) => `${v.toFixed(2)} rad/s`
     });
 
-    cameraSection.appendChild(el('div', 'note', 'The wheel over the particle window zooms too. Inside view puts the camera in among the particles, so the spear sweeps past you.'));
+    addRange(cameraSection, {
+        key: 'STOP_ANGLE', label: 'Settle angle', min: 0, max: 360, step: 5, value: 0,
+        format: (v) => `${v.toFixed(0)}°`
+    });
+
+    cameraSection.appendChild(el('div', 'note', 'The assembly eases to the settle angle, then turns on forever from there. The wheel over the particle window zooms too, and inside view puts the camera in among the particles.'));
 
     /*--- Visualizer ---*/
 
@@ -459,6 +464,13 @@
         key: 'FADE_MS', label: 'Fade', min: 200, max: 4000, step: 100, value: 1200,
         format: (v) => `${(v / 1000).toFixed(2)} s`, live: false
     });
+
+    const timingButtons = el('div', 'buttons');
+    timingButtons.style.marginTop = '10px';
+    timingSection.appendChild(timingButtons);
+    addToggle(timingButtons, { key: 'LOOP', label: 'Rebuild loop', value: true });
+
+    timingSection.appendChild(el('div', 'note', 'With the loop off the shape assembles once and then stays assembled, turning forever — hold, fade and rebuild are skipped.'));
 
     /*--- Look ---*/
 

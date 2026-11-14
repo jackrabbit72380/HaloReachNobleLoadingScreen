@@ -1,9 +1,10 @@
 # Holographic Particle Accelerator
 
 A WebGL2 particle animation. Thousands of points fly in from a sphere and assemble a real 3D
-ball — or a cube, a torus, an atom, a helix, a pyramid, a star, a spear, the equalizer, or a mesh
-you bring in from Blender — then keep turning, hold, and rebuild. The controls live in a panel
-docked down the right-hand side of the same window: **Home** opens it, **Home** closes it.
+ball — or a cube, a torus, an atom, a helix, a pyramid, a star, a spear, the equalizer, its square
+grid, or a mesh you bring in from Blender — then keep turning, hold, and rebuild. The controls live
+in a panel docked down the right-hand side of the same window: **Home** opens it, **Home** closes
+it.
 
 Written by **Jackrabbit72380**. No libraries, no build step.
 
@@ -67,12 +68,13 @@ by nature.
 | **Ball** | A sphere sampled on its surface — 24 meridians, 12 parallels and a skin between them (~10 800 points, radius 2.07). |
 | **Cube** | Six flat faces with the twelve edges and eight corners built up denser (~12 000 points, half-extent 2.07). |
 | **Torus** | A ring with a solid tube, points spread evenly over the surface (1.52 ring, 0.66 tube). |
-| **Atom** | A nucleus ball with three elliptical orbits in different planes, an electron riding each. |
+| **Atom** | A nucleus ball with three elliptical orbits standing upright in different planes, an electron riding each. |
 | **Helix** | A double helix along X, two strands with rungs between them. |
 | **Pyramid** | A square pyramid: four triangular sides, a base, ridges and corners denser. |
 | **Star** | A five-pointed star with real thickness — the rim drawn back to a point on each face. |
 | **Spear** | Pommel, ferrule, wrapped shaft, socket collar and a leaf blade along X. |
-| **Equalizer (audio bars)** | A flat disc of 64 columns that rise with the spectrum — the target that answers the music. |
+| **Equalizer (audio bars)** | A flat disc of 64 columns that rise with the spectrum — the target built for the music. |
+| **Grid (audio bars)** | The same 64 bars as an 8 × 8 square grid on a plane — a rotating grid instead of a wheel. |
 | **Imported mesh** | A Blender OBJ / PLY turned into a point cloud over its triangles. |
 | **Glyph, any image** | A picture sampled as a silhouette — flat, with a thin slab of depth. |
 
@@ -202,12 +204,12 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 | Section | What it does |
 | :--- | :--- |
 | **Reset** | The wide button at the top of the panel, above every section — the first thing in the list. |
-| **Target** | Ball, cube, torus, atom, helix, pyramid, star, spear, the equalizer, imported mesh — all 3D — plus the glyph or any image, load, drop or paste, then **Rebuild**. |
+| **Target** | Ball, cube, torus, atom, helix, pyramid, star, spear, the equalizer, the grid, imported mesh — all 3D — plus the glyph or any image, load, drop or paste, then **Rebuild**. |
 | **Title** | The caption under the shape and its size. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
 | **Camera** | Spin speed and turn axis, infinite rotation, zoom, settle angle, tilt, the pivot, pan, outside / inside view. |
 | **Show** | Inside spin, music visualizer and rainbow modes, their presets, and the shuffle timer. |
-| **Visualizer** | Equalizer ring on/off and its band height. |
+| **Visualizer** | Equalizer ring on/off, and **band height** — how far the spectrum moves whatever is on screen. |
 | **Timing** | Assembly, hold and fade durations, plus the rebuild loop toggle. |
 | **Look** | Tint, glow falloff, chromatic rim. |
 | **Effects** | Grid, scanlines, vignette, camera shake — on/off. |
@@ -275,6 +277,22 @@ sends 60 times a second from whatever audio source is listening; with no audio t
 It is a mode rather than a mask (`MODE: 'equalizer'`), which is why picking it swaps the mode
 instead of the mask source, and why the last shape you had is still there when you leave it.
 
+### Grid (audio bars)
+
+The same bars as a flat square instead of a ring: **Target → Grid (audio bars)** lays the 64 bands
+out as an 8 × 8 grid on a plane, one band per cell, standing on the grid of lines they sit in. The
+plane turns with the model, so a Y turn spins it as a rotating grid; read from above, each cell
+rises with its own band. It is a mode too (`MODE: 'grid'`), which is why it sits beside the
+equalizer in the list rather than replacing the target list's mask sources.
+
+### Band height applies to every target
+
+**Visualizer → Band height** is not just the equalizer's setting. The two audio planes lift their
+bars; any other target pushes its points outward along their own radius instead — each point
+answers the band for the angle it sits at round the turn axis, and the outer surface answers harder
+than the middle, so the music runs round the shape without raising the whole thing. With no audio
+nothing moves.
+
 ### Reacting to music
 
 | Source | How |
@@ -283,8 +301,9 @@ instead of the mask source, and why the last shape you had is still there when y
 | **Microphone** | Works everywhere; on a Mac route system sound into a loopback device (e.g. BlackHole) and select it as the input. |
 | **Audio file** | Pick an MP3 / WAV / OGG / M4A — it plays through the page on loop and drives the same reaction. |
 
-Only the level (RMS, plus 64 spectrum bands for the equalizer) is used — nothing is recorded,
-stored or uploaded. Sensitivity scales the response; the meter shows the live level.
+Only the level (RMS, plus the 64 bands that drive the equalizer, the grid, and the swell of every
+shape) is used — nothing is recorded, stored or uploaded. Sensitivity scales the response; the
+meter shows the live level.
 
 ## Engine API
 
@@ -300,7 +319,7 @@ HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + turn
 HPA.set({ SPIN_AXIS: 'z' });                        // 'y' turntable | 'x' tumble | 'z' roll
 HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly settles at
 HPA.set({ PIVOT_Y: -2.07 });                        // turn on the base, not the middle
-HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
+HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer' | 'grid'
 HPA.setMask('torus');                               // a shape name, 'mesh', or an image URL
 HPA.setPointCloud(points);                          // any [{x, y, z}, …] as the target, in 3D
 HPA.shapes.spiral = () => points;                   // another shape, if you want one

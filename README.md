@@ -115,8 +115,8 @@ the rotation as well as the ball and spear. **Zoom pulse**, **Colour drift** and
 apply live; the level comes from whatever the Audio response section is listening to, and with no
 audio the visualizer still breathes on its own.
 
-The **Inside spin** and **Off** modes move the camera as well, so the **Camera** section's
-*Outside view* / *Inside view* buttons light up to match rather than keeping the state they had.
+**Inside spin** and **Off** move the camera as well, so the **Camera** section's *Outside view* /
+*Inside view* buttons light up to match instead of keeping whatever they had.
 
 ## Controller
 
@@ -167,7 +167,7 @@ times a second from whatever audio source is listening; with no audio the disc l
 
 | Source | How |
 | :--- | :--- |
-| **System audio** | Chrome or Edge on Windows or Linux. Click *System audio*, pick a screen or window, and tick **Share system audio**. Captures whatever the machine plays — Spotify, a DAW, a video. macOS does not offer this. |
+| **System audio** | Chrome / Edge on Windows or Linux. Click *System audio*, pick a screen or window, and tick **Share system audio**. Captures whatever the machine plays — Spotify, a DAW, a video. macOS does not offer this. |
 | **Microphone** | Works everywhere; on a Mac route system sound into a loopback device (e.g. BlackHole) and select it as the input. |
 | **Audio file** | Pick an MP3 / WAV / OGG / M4A — it plays through the page on loop and drives the same reaction. |
 

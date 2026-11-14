@@ -22,7 +22,7 @@
     /*--- Configuration ---*/
 
     const CONFIG = {
-        MASK_SRC: 'ball',            // 'ball', 'spear', 'cube' or an image URL / data URL
+        MASK_SRC: 'ball',            // 'ball', 'spear', 'cube', 'mesh' or an image URL / data URL
         MODE: 'shape',               // 'shape' | 'equalizer'
         VIEW: 'orbit',               // 'orbit' | 'inside'
         ZOOM: 1.0,
@@ -352,6 +352,7 @@
         if (source === 'ball') return ballPoints();
         if (source === 'spear') return spearPoints();
         if (source === 'cube') return cubePoints();
+        if (source === 'mesh') return cloudPoints || ballPoints();
 
         const image = await loadImage(source);
         const width = Math.max(16, Math.round(CONFIG.SAMPLE_WIDTH));
@@ -744,6 +745,7 @@
     gl.bindVertexArray(null);
 
     let scene = null;
+    let cloudPoints = null;
     let spectrum = new Float32Array(64);
     let projection = null;
     let startedAt = 0;
@@ -945,7 +947,7 @@
                 return;
             }
             if (!MediaRecorder.isTypeSupported(mime)) {
-                reject(new Error('MIME type ' + mime + ' is not supported in this browser.'));
+                reject(new Error(mime + ' is not supported in this browser.'));
                 return;
             }
 
@@ -978,6 +980,15 @@
         ready,
         rebuild: () => rebuild(true),
         setMask: (src) => { CONFIG.MASK_SRC = src; return rebuild(true); },
+        // An imported mesh: points already in world units, fitted by src/import.js. It is kept
+        // beside CONFIG rather than in it because it is geometry, not a number you can slide —
+        // and because handing it over as points is what keeps its depth: the old importer drew
+        // the model's front view into a mask image, and a picture of a model is flat.
+        setPointCloud(points) {
+            cloudPoints = Array.isArray(points) && points.length ? points : null;
+            CONFIG.MASK_SRC = cloudPoints ? 'mesh' : 'ball';
+            return rebuild(true);
+        },
         set(patch = {}) {
             const needsRebuild =
                 'MASK_SRC' in patch ||

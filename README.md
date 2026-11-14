@@ -11,8 +11,7 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | :--- | :--- |
 | `index.html` | The animation, with the controller docked on the right. Flags below. |
 | `controller.html` | The same panel in a window of its own, for a second screen. |
-| `src/engine.js` | The whole engine — buffers, shaders, `window.HPA`. |
-| `src/shapes3d.js` | `HPA.shapes` — the 3D torus, atom, helix, pyramid and star. |
+| `src/engine.js` | The whole engine — every shape, buffers, shaders, `window.HPA`. |
 | `src/dock.js` | Opens and closes the docked panel with Home, and bridges it to this window. |
 | `src/relay.js` | Offers the particle window to its opener, so a reloaded panel re-attaches. |
 | `src/reset.js` | `HPA.reset()` — puts the shipped settings back. |
@@ -79,9 +78,9 @@ by nature.
 All of them are sized against `MASK_HEIGHT` (4.6), so changing target does not change how big the
 thing is on screen, and all of them arrive from the middle outward as the assembly runs.
 
-The procedural ones live in `src/shapes3d.js` and register themselves on `HPA.shapes` — the table
-the engine samples a target from — so adding one is a function returning `[{x, y, z, wait}, …]`
-and one line at the bottom of that file.
+Every one is built in `src/engine.js`, in the shapes section: a function returning
+`[{ x, y, z, wait }, …]`, registered on `HPA.shapes` — the table the engine samples a target
+from. Adding another is a function plus one line there, and the file is not split.
 
 ### Title
 
@@ -247,7 +246,7 @@ HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly sett
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
 HPA.setMask('torus');                               // a shape name, 'mesh', or an image URL
 HPA.setPointCloud(points);                          // any [{x, y, z}, …] as the target, in 3D
-HPA.shapes.spiral = () => points;                   // register a shape of your own
+HPA.shapes.spiral = () => points;                   // another shape, if you want one
 HPA.rebuild();                                      // resample and restart
 HPA.resetRotation();                                // endless turn back to the settle angle
 HPA.reset();                                        // shipped settings back, assemble again

@@ -8,7 +8,7 @@
  *  no message protocol.
  *
  *  Every section of the panel is built here, in the order it appears:
- *    Target, Particles, Camera, Show, Visualizer, Timing, Look, Effects, Audio, Capture
+ *    Target, Title, Particles, Camera, Show, Visualizer, Timing, Look, Effects, Audio, Capture
  */
 
 (() => {
@@ -423,6 +423,36 @@
         }
     }
 
+    /*--- Title ---*/
+
+    // The words that fade in under the shape. Its own section, near the top: it is the first
+    // thing most people want to change, and it used to sit at the bottom of Look.
+    const titleSection = section('Title');
+
+    const captionRow = el('div', 'row wide');
+    captionRow.appendChild(el('span', 'label', 'Caption text'));
+    const captionInput = el('input');
+    captionInput.type = 'text';
+    captionInput.value = 'Holographic Particle Accelerator';
+    captionInput.placeholder = 'Holographic Particle Accelerator';
+    captionInput.spellcheck = false;
+    captionRow.appendChild(captionInput);
+    titleSection.appendChild(captionRow);
+
+    captionInput.addEventListener('input', () => set({ LABEL: captionInput.value }));
+    controls.set('LABEL', {
+        set(text) {
+            if (document.activeElement !== captionInput) captionInput.value = text;
+        }
+    });
+
+    addRange(titleSection, {
+        key: 'CAPTION_SCALE', label: 'Caption size', min: 0.4, max: 2.2, step: 0.05, value: 1,
+        format: (v) => `${v.toFixed(2)}×`
+    });
+
+    titleSection.appendChild(el('div', 'note', 'This is the line under the shape. It fades in once the target has assembled — the `?nocaption` flag hides it entirely.'));
+
     function leaveEqualizer(api) {
         if (!eqOn) return;
         eqOn = false;
@@ -818,26 +848,6 @@
     addRange(lookSection, {
         key: 'CHROMA', label: 'Chromatic rim', min: 0, max: 1, step: 0.05, value: 0,
         format: (v) => v.toFixed(2)
-    });
-
-    const captionRow = el('div', 'row wide');
-    captionRow.style.marginTop = '10px';
-    captionRow.appendChild(el('span', 'label', 'Caption'));
-    const captionInput = el('input');
-    captionInput.type = 'text';
-    captionInput.value = 'Holographic Particle Accelerator';
-    captionRow.appendChild(captionInput);
-    lookSection.appendChild(captionRow);
-    captionInput.addEventListener('input', () => set({ LABEL: captionInput.value }));
-    controls.set('LABEL', {
-        set(text) {
-            if (document.activeElement !== captionInput) captionInput.value = text;
-        }
-    });
-
-    addRange(lookSection, {
-        key: 'CAPTION_SCALE', label: 'Caption size', min: 0.4, max: 2.2, step: 0.05, value: 1,
-        format: (v) => `${v.toFixed(2)}×`
     });
 
     /*--- Effects ---*/

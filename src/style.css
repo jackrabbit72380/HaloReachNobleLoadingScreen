@@ -29,8 +29,7 @@ body {
     width: min(88vw, 1100px);
     text-align: center;
     font: 600 calc(clamp(12px, 1.9vw, 30px) * var(--caption-scale))/1.2 "Segoe UI", system-ui, sans-serif;
-    letter-spacing: 0.26em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
     color: #d6ecff;
     text-shadow: 0 0 18px rgba(120, 190, 255, 0.55);
     opacity: 0;
@@ -53,8 +52,7 @@ body {
     justify-content: center;
     color: #8fa9ba;
     font: 400 13px/1.6 "Segoe UI", system-ui, sans-serif;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
+    letter-spacing: 0.04em;
     transition: opacity 600ms ease;
 }
 
@@ -118,9 +116,8 @@ body {
     border-radius: 999px;
     background: rgba(8, 13, 19, 0.72);
     color: #7c92a6;
-    font: 400 10px/1 "Segoe UI", system-ui, sans-serif;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
+    font: 400 11px/1 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.01em;
     cursor: pointer;
     user-select: none;
 }

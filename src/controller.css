@@ -64,10 +64,9 @@ body {
 
 h1 {
     margin: 0;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -87,9 +86,7 @@ h1 em {
 
 .status {
     color: var(--dim);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 12px;
     white-space: nowrap;
     max-width: 40vw;
     overflow: hidden;
@@ -107,9 +104,7 @@ h1 em {
 .ghost {
     color: var(--text);
     text-decoration: none;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: 12px;
     border: 1px solid var(--line);
     border-radius: 6px;
     padding: 6px 10px;
@@ -152,10 +147,9 @@ button.ghost {
 
 .section > h2 {
     margin: 0 0 10px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     color: var(--dim);
 }
 
@@ -255,9 +249,8 @@ button {
     border-radius: 6px;
     padding: 7px 10px;
     font: inherit;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.01em;
     cursor: pointer;
     transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
 }

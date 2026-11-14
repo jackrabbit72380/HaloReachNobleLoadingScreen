@@ -2,7 +2,7 @@
 
 A WebGL2 particle animation. Thousands of points fly in from a sphere and assemble any
 image you point them at, hold, then rebuild — forever. A separate controller page drives it
-live: swap the target, change colour and effects, react to audio, capture PNG / WebP / video.
+live: swap the target, change colour and effects, react to music, capture PNG / WebP / video.
 
 Written by **Jackrabbit72380**. No libraries, no build step.
 
@@ -34,11 +34,22 @@ python3 -m http.server 3000
 | **Timing** | Assembly, hold and fade durations. |
 | **Look** | Tint, glow falloff, chromatic rim, caption text and size. |
 | **Effects** | Grid, scanlines, vignette, camera shake — on/off. |
-| **Audio** | Microphone level drives point size and brightness. Nothing leaves the page. |
+| **Audio** | Three sources: microphone, system audio, or a local audio file. Level drives point size and brightness. |
 | **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it. |
 
 Everything is applied live except density, depth and dust, which rebuild the particle
 buffer. Video is captured from the canvas only, so the caption overlay is not in the frame.
+
+### Reacting to music
+
+| Source | How |
+| :--- | :--- |
+| **System audio** | Chrome / Edge on Windows or Linux. Click *System audio*, pick a screen or window, and tick **Share system audio**. Captures whatever the machine plays — Spotify, a DAW, a video. macOS does not offer this. |
+| **Microphone** | Works everywhere; on a Mac route system sound into a loopback device (e.g. BlackHole) and select it as the input. |
+| **Audio file** | Pick an MP3 / WAV / OGG / M4A — it plays through the page on loop and drives the same reaction. |
+
+Only the level (RMS) is used — nothing is recorded, stored or uploaded. Sensitivity scales the
+response; the meter shows the live level.
 
 ## Engine API
 

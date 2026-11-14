@@ -65,6 +65,12 @@ Also built in: a 3D spear (pommel, ferrule, wrapped shaft, socket collar and a l
 X), the flat glyph, six procedural 2D shapes, any PNG / JPEG / WebP / SVG you load, and any OBJ /
 PLY mesh from Blender.
 
+### Title
+
+The words under the shape are yours: **Title → Caption text**. Type and it changes as you go —
+no rebuild, no waiting for the next cycle. **Caption size** is the slider below it, and `?nocaption`
+at the end of the URL hides the line entirely. A blank field leaves a space with nothing in it.
+
 ### Turning
 
 The turn never stops. The assembly winds the shape in and eases it to **Settle angle** (0–360°),
@@ -133,19 +139,20 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 | Section | What it does |
 | :--- | :--- |
 | **Target** | Ball (3D), spear (3D), the flat glyph, six procedural shapes, any image, or a mesh file — load, drop or paste, then **Rebuild**. |
+| **Title** | The caption under the shape and its size. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
 | **Camera** | Spin speed, zoom, settle angle, tilt and pan, outside / inside view. |
 | **Show** | Inside spin, music visualizer and rainbow modes, their presets, and the shuffle timer. |
 | **Visualizer** | Equalizer ring on/off and its band height. |
 | **Timing** | Assembly, hold and fade durations, plus the rebuild loop toggle. |
-| **Look** | Tint, glow falloff, chromatic rim, caption text and size. |
+| **Look** | Tint, glow falloff, chromatic rim. |
 | **Effects** | Grid, scanlines, vignette, camera shake — on/off. |
 | **Audio** | Microphone, system audio or a local audio file. Level drives size and brightness. |
 | **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it, and the model download — captured inside the particle window. |
 
 **Reset** in the top-right puts every setting back to the shipped defaults — in the engine and
-in the panel — and starts the assembly over: ball target, 0.064 turns/s, settle angle 0°,
-tilt 0°, no pan, loop on, tint `#a1d6ff`, show mode off.
+in the panel — and starts the assembly over: ball target, the shipped caption, 0.064 turns/s,
+settle angle 0°, tilt 0°, no pan, loop on, tint `#a1d6ff`, show mode off.
 
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
@@ -156,7 +163,7 @@ the frame.
 **Capture → Model (.obj)** or **Model (.ply)** writes the target you are looking at — ball, spear,
 glyph, a procedural shape, a loaded image or an imported mesh — as a point cloud: one vertex per
 particle, world units, Y up, no faces. Blender imports either one in a single step (File → Import
-→ Wavefront `.obj`, or New Stanford `.ply`); instance a sphere or a metaball on the points to give
+→ Wavefront `.obj`, or New Stanford `.ply`); instance a sphere or metaball on the points to give
 them body.
 
 There is no `.blend` export, and it is not a missing feature: a `.blend` is a dump of Blender's
@@ -200,6 +207,8 @@ stored or uploaded. Sensitivity scales the response; the meter shows the live le
 
 ```js
 HPA.set({ COLOR: [1, 0.4, 0.2], POINT_SIZE: 42 });  // any CONFIG key
+HPA.set({ LABEL: 'Your title' });                   // the line under the shape
+HPA.set({ CAPTION_SCALE: 1.4 });                     // and how big it is
 HPA.set({ VIEW: 'inside', ZOOM: 2.4 });             // camera
 HPA.set({ TILT: 0, PAN_X: 0, PAN_Y: 0 });           // head-on, centred
 HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + endless turn
@@ -237,4 +246,5 @@ number in turns per second, so 0.064 turns/s is the default 0.40 rad/s.
 
 `CONFIG` at the top of `src/engine.js`: 3D ball target, 260-sample mask, 6 000 dust motes,
 7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s (0.064 turns/s) endless spin from a 0° settle
-angle, tilt 0° (head-on), no pan, loop on, tint `#a1d6ff`.
+angle, tilt 0° (head-on), no pan, loop on, tint `#a1d6ff`, caption `Holographic Particle
+Accelerator`.

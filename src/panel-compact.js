@@ -2,8 +2,8 @@
  *  Jackrabbit72380
  *  2026
  *
- *  Keeps the control panel readable: every long note becomes a small "i" pill in the top right of
- *  its section, level with the heading, that opens the text when it is clicked. No paragraph, and
+ *  Keeps the control panel readable: the long notes of a section become one small "i" pill in
+ *  its top right, level with the heading, that opens them when it is clicked. No paragraphs, and
  *  no extra row. It also takes the Equalizer ring button off the Visualizer section, because the
  *  same target already sits in the Target list as Equalizer (audio bars) — one way in is enough.
  */
@@ -46,12 +46,18 @@
     }
   }
 
-  /*--- Notes become pills, in the heading ---*/
+  /*--- Notes become one pill per section, in the heading ---*/
 
+  // A section can hold several notes, and the heading has room for one pill, so they open together.
+  const bySection = new Map();
   for (const note of sections.querySelectorAll('.note')) {
-    if (note.dataset.pill) continue;
-    note.dataset.pill = '1';
+    const section = note.closest('.section');
+    if (!section) continue;
+    if (!bySection.has(section)) bySection.set(section, []);
+    bySection.get(section).push(note);
+  }
 
+  for (const [section, notes] of bySection) {
     const pill = document.createElement('button');
     pill.type = 'button';
     pill.className = 'info-pill';
@@ -59,16 +65,15 @@
     pill.title = 'What this section does';
     pill.setAttribute('aria-expanded', 'false');
 
-    note.hidden = true;
+    for (const note of notes) note.hidden = true;
+
     pill.addEventListener('click', () => {
-      const open = note.hidden;
-      note.hidden = !open;
+      const open = notes[0].hidden;
+      for (const note of notes) note.hidden = !open;
       pill.classList.toggle('open', open);
       pill.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 
-    const section = note.closest('.section');
-    if (section) section.appendChild(pill);
-    else note.before(pill);
+    section.appendChild(pill);
   }
 })();

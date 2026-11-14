@@ -33,6 +33,7 @@
         PAN_Y: 0,                    // view offset up/down, world units
         SWAY: 0,                     // 0..1 slow pitch wobble while the shape assembles
         ROTATE_SPEED: 0.40,          // radians per second once the shape is assembled
+        SPIN_AXIS: 'y',              // the endless turn goes round this one: 'y', 'x' or 'z'
         STOP_ANGLE: 0,               // degrees: the yaw the assembly settles at
         LOOP: true,                  // false assembles once and rotates forever
         EQ_HEIGHT: 2.2,              // world height a full-scale spectrum band reaches
@@ -322,19 +323,43 @@
         return out;
     }
 
-    // The turn happens around PIVOT_X/Y/Z instead of the world origin: move the pivot to the
-    // origin, rotate, then put it back — M = T(P) · R · T(-P). With the pivot at 0 this is the
-    // plain rotation it always was, with MASK_LIFT as the only translation.
-    function rotation3D(spinAngle, tiltAngle, lift, pivot) {
-        const cy = Math.cos(spinAngle), sy = Math.sin(spinAngle);
-        const cx = Math.cos(tiltAngle), sx = Math.sin(tiltAngle);
+    // A turn about one of the three axes, so the endless spin is not tied to the vertical:
+    // y is the turntable, x tumbles the object over, z rolls it. Default y is the plain yaw
+    // this always was.
+    function turnMatrix(angle, axis) {
+        const c = Math.cos(angle), s = Math.sin(angle);
 
-        const yaw = new Float32Array([
-            cy, 0, -sy, 0,
+        if (axis === 'x') {
+            return new Float32Array([
+                1, 0, 0, 0,
+                0, c, s, 0,
+                0, -s, c, 0,
+                0, 0, 0, 1
+            ]);
+        }
+        if (axis === 'z') {
+            return new Float32Array([
+                c, s, 0, 0,
+                -s, c, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            ]);
+        }
+        return new Float32Array([
+            c, 0, -s, 0,
             0, 1, 0, 0,
-            sy, 0, cy, 0,
+            s, 0, c, 0,
             0, 0, 0, 1
         ]);
+    }
+
+    // The turn happens around PIVOT_X/Y/Z instead of the world origin: move the pivot to the
+    // origin, rotate, then put it back — M = T(P) · R · T(-P). With the pivot at 0 this is the
+    // plain rotation it always was, with MASK_LIFT as the only translation. TILT stays a pitch
+    // about X whichever axis is turning, so it keeps meaning "lean the top away from you".
+    function rotation3D(spinAngle, tiltAngle, lift, pivot, axis) {
+        const cx = Math.cos(tiltAngle), sx = Math.sin(tiltAngle);
+
         const pitch = new Float32Array([
             1, 0, 0, 0,
             0, cx, sx, 0,
@@ -342,7 +367,7 @@
             0, 0, 0, 1
         ]);
 
-        const matrix = multiply4(pitch, yaw);
+        const matrix = multiply4(pitch, turnMatrix(spinAngle, axis));
 
         const px = pivot[0];
         const py = pivot[1] + lift;
@@ -1157,12 +1182,12 @@
         // an optional extra so a head-on shape can stay dead level.
         const sway = (Number(CONFIG.SWAY) || 0) * settle * 0.5 * Math.sin(seconds * 0.7);
         const tilt = eqMode ? 0 : (Number(CONFIG.TILT) || 0) * Math.PI / 180 + sway;
-        // The pivot is where the target turns from, so an imported model can spin on its base.
+        // The pivot is where the target turns from, and the axis is which way it turns.
         const model = rotation3D(spin, tilt, CONFIG.MASK_LIFT, [
             Number(CONFIG.PIVOT_X) || 0,
             Number(CONFIG.PIVOT_Y) || 0,
             Number(CONFIG.PIVOT_Z) || 0
-        ]);
+        ], String(CONFIG.SPIN_AXIS || 'y').toLowerCase().charAt(0));
 
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0.0, 0.0, 0.0, 1.0);

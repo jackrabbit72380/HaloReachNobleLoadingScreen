@@ -337,21 +337,23 @@
     modelInput.hidden = true;
     sourceSection.appendChild(modelInput);
 
+    // Every name here is a target the engine builds or holds in 3D, or — the glyph — an image
+    // file it samples as a picture. The panel just passes the name along; src/shapes3d.js is
+    // where the procedural ones live.
     const presetRow = el('div', 'row wide');
     presetRow.style.marginTop = '10px';
     const presetSelect = el('select');
     const PRESETS = [
         ['ball', 'Ball (3D)'],
-        ['spear', 'Spear (3D)'],
         ['cube', 'Cube (3D)'],
+        ['torus', 'Torus (3D)'],
+        ['atom', 'Atom (3D)'],
+        ['helix', 'Helix (3D)'],
+        ['pyramid', 'Pyramid (3D)'],
+        ['star', 'Star (3D)'],
+        ['spear', 'Spear (3D)'],
         ['mesh', 'Imported mesh (3D)'],
-        ['res/hpa-glyph.svg', 'Glyph (flat)'],
-        ['torus', 'Torus'],
-        ['atom', 'Atom'],
-        ['sphere', 'Sphere (flat)'],
-        ['helix', 'Helix'],
-        ['pyramid', 'Pyramid'],
-        ['star', 'Star']
+        ['res/hpa-glyph.svg', 'Glyph (image)']
     ];
     for (const [value, label] of PRESETS) {
         const option = el('option', '', label);
@@ -360,7 +362,7 @@
     }
     presetRow.appendChild(presetSelect);
     sourceSection.appendChild(presetRow);
-    sourceSection.appendChild(el('div', 'note', 'Any PNG, JPEG, WebP or SVG works — dark pixels on light, or a transparent cut-out. Drop or paste it anywhere on this page. A mesh comes in as a .obj or .ply exported from Blender, and arrives as real 3D geometry with its depth intact.'));
+    sourceSection.appendChild(el('div', 'note', 'Every shape is real 3D geometry — turn it and you see the far side. A picture (any PNG, JPEG, WebP or SVG, or the glyph) is flat by nature: dark pixels on light, or a transparent cut-out. Drop or paste a file anywhere on this page. A mesh comes in as a .obj or .ply exported from Blender, and arrives with its depth intact.'));
 
     loadButton.addEventListener('click', () => fileInput.click());
     modelButton.addEventListener('click', () => modelInput.click());
@@ -379,8 +381,9 @@
     randomButton.addEventListener('click', randomShape);
     presetSelect.addEventListener('change', () => applyPreset(presetSelect.value));
 
-    // One place picks the next target, so the button and the visualizer's shuffle agree.
-    // The imported mesh is left out: it is whatever file was loaded, not a shape to roll.
+    // One place picks the next target, so the button and the visualizer's shuffle agree. The
+    // narrowed shapes are left out: the ball and spear are the default look, and the imported
+    // mesh is whatever file was loaded, not a shape to roll.
     function randomShape() {
         const shapeKeys = PRESETS
             .map(([value]) => value)
@@ -391,16 +394,13 @@
         return pick;
     }
 
-    // Four targets are geometry the engine builds or holds in 3D (ball, spear, cube, imported
-    // mesh); everything else is drawn flat on a canvas and sampled as a picture.
+    // Every preset value is a mask source the engine understands: a registered shape name, the
+    // imported cloud ('mesh'), or an image URL. There is nothing left to paint here.
     function applyPreset(value) {
         const api = playerApi();
         if (!api) return needPlayer();
-        const solid = value === 'ball' || value === 'spear' || value === 'cube'
-            || value === 'mesh' || value.startsWith('res/');
-        const source = solid ? value : makeMask(MASKS[value]);
         leaveEqualizer(api);
-        api.set({ MODE: 'shape', MASK_SRC: source });
+        api.set({ MODE: 'shape', MASK_SRC: value });
         setStatus('swapping target', 'busy');
         window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1000);
     }
@@ -1218,128 +1218,6 @@
         const items = event.clipboardData && event.clipboardData.files;
         if (items && items[0]) loadFile(items[0]);
     });
-
-    /*--- Procedural masks ---*/
-
-    function makeMask(paint) {
-        const surface = document.createElement('canvas');
-        surface.width = 512;
-        surface.height = 512;
-        const context = surface.getContext('2d');
-        context.strokeStyle = '#ffffff';
-        context.fillStyle = '#ffffff';
-        context.lineWidth = 9;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        paint(context, 512);
-        return surface.toDataURL('image/png');
-    }
-
-    // Flat drawings, sampled as pictures. The ball, spear, cube and imported mesh are not here:
-    // the engine builds those, or holds their points, as real 3D geometry.
-    const MASKS = {
-        torus(x, s) {
-            const c = s / 2;
-            x.beginPath(); x.arc(c, c, 196, 0, Math.PI * 2); x.stroke();
-            x.beginPath(); x.arc(c, c, 128, 0, Math.PI * 2); x.stroke();
-            x.save();
-            x.setLineDash([14, 22]);
-            x.beginPath(); x.arc(c, c, 162, 0, Math.PI * 2); x.stroke();
-            x.restore();
-            for (let i = 0; i < 24; i++) {
-                const a = (i / 24) * Math.PI * 2;
-                x.beginPath();
-                x.moveTo(c + Math.cos(a) * 196, c + Math.sin(a) * 196);
-                x.lineTo(c + Math.cos(a) * 210, c + Math.sin(a) * 210);
-                x.stroke();
-            }
-        },
-        atom(x, s) {
-            const c = s / 2;
-            for (let i = 0; i < 3; i++) {
-                x.save();
-                x.translate(c, c);
-                x.rotate((i * Math.PI) / 3);
-                x.beginPath();
-                x.ellipse(0, 0, 200, 76, 0, 0, Math.PI * 2);
-                x.stroke();
-                x.restore();
-            }
-            x.beginPath(); x.arc(c, c, 30, 0, Math.PI * 2); x.fill();
-            x.beginPath(); x.arc(c + 196, c, 12, 0, Math.PI * 2); x.fill();
-            x.beginPath(); x.arc(c - 98, c - 170, 12, 0, Math.PI * 2); x.fill();
-            x.beginPath(); x.arc(c - 98, c + 170, 12, 0, Math.PI * 2); x.fill();
-        },
-        sphere(x, s) {
-            const c = s / 2;
-            const r = 190;
-            x.beginPath(); x.arc(c, c, r, 0, Math.PI * 2); x.stroke();
-            for (const k of [0.36, 0.72]) {
-                x.beginPath(); x.ellipse(c, c, r * k, r, 0, 0, Math.PI * 2); x.stroke();
-                x.beginPath(); x.ellipse(c, c, r, r * k, 0, 0, Math.PI * 2); x.stroke();
-            }
-            x.beginPath(); x.moveTo(c - r, c); x.lineTo(c + r, c); x.stroke();
-            x.beginPath(); x.moveTo(c, c - r); x.lineTo(c, c + r); x.stroke();
-        },
-        helix(x, s) {
-            const c = s / 2;
-            const amplitude = 120;
-            const span = 180;
-            for (let phase = 0; phase < 2; phase++) {
-                x.beginPath();
-                for (let i = 0; i <= 120; i++) {
-                    const t = i / 120;
-                    const px = c - span + t * span * 2;
-                    const py = c + Math.sin(t * Math.PI * 4 + phase * Math.PI) * amplitude;
-                    if (i === 0) x.moveTo(px, py);
-                    else x.lineTo(px, py);
-                }
-                x.stroke();
-            }
-            for (let i = 0; i <= 14; i++) {
-                const t = i / 14;
-                const px = c - span + t * span * 2;
-                const py1 = c + Math.sin(t * Math.PI * 4) * amplitude;
-                const py2 = c + Math.sin(t * Math.PI * 4 + Math.PI) * amplitude;
-                x.beginPath(); x.moveTo(px, py1); x.lineTo(px, py2); x.stroke();
-            }
-        },
-        pyramid(x, s) {
-            const c = s / 2;
-            const w = 170;
-            const h = 200;
-            const base = [
-                [c, c + 70],
-                [c + w, c + 20],
-                [c, c - 30],
-                [c - w, c + 20]
-            ];
-            x.beginPath();
-            base.forEach(([px, py], index) => {
-                if (index === 0) x.moveTo(px, py);
-                else x.lineTo(px, py);
-            });
-            x.closePath(); x.stroke();
-            for (const [px, py] of base) {
-                x.beginPath(); x.moveTo(px, py); x.lineTo(c, c - h); x.stroke();
-            }
-        },
-        star(x, s) {
-            const c = s / 2;
-            const outer = 210;
-            const inner = 92;
-            x.beginPath();
-            for (let i = 0; i < 10; i++) {
-                const angle = -Math.PI / 2 + (i * Math.PI) / 5;
-                const radius = i % 2 === 0 ? outer : inner;
-                const px = c + Math.cos(angle) * radius;
-                const py = c + Math.sin(angle) * radius;
-                if (i === 0) x.moveTo(px, py);
-                else x.lineTo(px, py);
-            }
-            x.closePath(); x.stroke();
-        }
-    };
 
     /*--- Utilities ---*/
 

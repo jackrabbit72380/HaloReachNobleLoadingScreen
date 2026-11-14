@@ -18,6 +18,7 @@
     const openButton = document.getElementById('open-player');
     const focusButton = document.getElementById('focus-player');
     const closeButton = document.getElementById('close-player');
+    const resetButton = document.getElementById('reset');
 
     const controls = new Map();
     const PLAYER_NAME = 'hpa-player';
@@ -154,6 +155,40 @@
     openButton.addEventListener('click', openPlayer);
     focusButton.addEventListener('click', focusPlayer);
     closeButton.addEventListener('click', closePlayer);
+    resetButton.addEventListener('click', resetAll);
+
+    // Puts both sides back to the shipped settings: the engine restores its CONFIG,
+    // resamples the default ball and restarts the assembly, then every control here is
+    // pulled from that CONFIG so the panel shows what the particle window is really doing.
+    async function resetAll() {
+        const api = playerApi();
+        if (!api) return needPlayer();
+        setStatus('resetting', 'busy');
+        leaveEqualizer(api);
+        await api.reset();
+        syncControls(api.config);
+        setStatus('reset to defaults', '');
+        window.setTimeout(() => {
+            if (connected && statusEl.textContent === 'reset to defaults') setStatus('connected', '');
+        }, 2200);
+    }
+
+    function syncControls(config) {
+        for (const [key, control] of controls) {
+            if (key in config) control.set(config[key]);
+        }
+
+        densityInput.value = config.SAMPLE_WIDTH;
+        densityValue.textContent = `${Number(config.SAMPLE_WIDTH).toFixed(0)} px`;
+
+        const known = PRESETS.some(([value]) => value === config.MASK_SRC);
+        presetSelect.value = known ? config.MASK_SRC : 'ball';
+
+        eqOn = config.MODE === 'equalizer';
+        eqButton.classList.toggle('on', eqOn);
+        outsideButton.classList.toggle('on', config.VIEW !== 'inside');
+        insideButton.classList.toggle('on', config.VIEW === 'inside');
+    }
 
     function updateConnection() {
         const api = playerApi();

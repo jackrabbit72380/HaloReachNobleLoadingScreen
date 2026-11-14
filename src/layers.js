@@ -27,7 +27,7 @@
     ['spear', 'Spear (3D)'],
     ['equalizer', 'Equalizer (audio bars)'],
     ['grid', 'Grid (audio bars)'],
-    ['blob', 'Blob (audio)']
+    ['blob3d', 'Blob (audio)']
   ];
 
   // The engine lives in this window when the panel is docked, or in the window this page
@@ -60,13 +60,13 @@
 
   // The blob is a target like any other, so it belongs in the Target list.
   const targetSelect = root.querySelector('select');
-  if (targetSelect && !Array.from(targetSelect.options).some((option) => option.value === 'blob')) {
+  if (targetSelect && !Array.from(targetSelect.options).some((option) => option.value === 'blob3d')) {
     const option = el('option', '', 'Blob (audio)');
-    option.value = 'blob';
+    option.value = 'blob3d';
     const meshOption = Array.from(targetSelect.options).find((item) => item.value === 'mesh');
     targetSelect.insertBefore(option, meshOption || null);
     targetSelect.addEventListener('change', () => {
-      if (targetSelect.value === 'blob') apply({ MODE: 'shape', MASK_SRC: 'blob' });
+      if (targetSelect.value === 'blob3d') apply({ MODE: 'shape', MASK_SRC: 'blob3d' });
     });
   }
 
@@ -184,7 +184,7 @@
     for (const [key, update] of Object.entries(sliders)) {
       if (key in config) update(config[key]);
     }
-    if (targetSelect && config.MODE === 'shape' && config.MASK_SRC === 'blob') targetSelect.value = 'blob';
+    if (targetSelect && config.MODE === 'shape' && config.MASK_SRC === 'blob3d') targetSelect.value = 'blob3d';
     return true;
   }
 

@@ -3,10 +3,14 @@
  *  2026
  *
  *  The blob target: a real sphere the music deforms. Quiet, it is a ball — every point sits on
- *  one shell. Each point answers the band at its own longitude, so a loud passage pushes whole
- *  wedges of the sphere outward and the ball turns into an organic, wobbling mass.
+ *  one shell with nothing to see but the ball. Each point answers the band at its own place on
+ *  the surface, so a loud passage pushes waves across it and the ball turns into an organic,
+ *  rippling mass.
  *
- *  Registered over the engine's own blob so the Target list keeps its name.
+ *  It is registered as blob3d rather than blob: the engine treats "blob" as a flat disc facing
+ *  the camera — it rolls it in the view plane and gives it oversized, softer sprites — which is
+ *  exactly what hid the shape of a sphere. Under its own name it turns, and reads, like every
+ *  other target.
  */
 
 (() => {
@@ -18,7 +22,7 @@
   const GOLDEN = Math.PI * (3 - Math.sqrt(5));
   const COUNT = 14000;
 
-  HPA.shapes.blob = () => {
+  HPA.shapes.blob3d = () => {
     const config = HPA.config || {};
     const radius = (Number(config.MASK_HEIGHT) || 4.6) * 0.32;
     const points = [];
@@ -32,17 +36,24 @@
       const z = Math.sin(phi) * ring;
 
       const shell = radius * (0.995 + Math.random() * 0.01);
-      const band = ((Math.atan2(z, x) + Math.PI) / (Math.PI * 2)) * 63.999;
+      const lon = Math.atan2(z, x);
+      const lat = Math.asin(Math.max(-1, Math.min(1, y)));
+
+      // Bands run diagonally over the surface — twice round the sphere and twice pole to pole —
+      // so a loud band travels across it as a wave instead of lifting one smooth shell. The
+      // small jitter lets neighbouring points answer neighbouring bands, which is the ripple.
+      const turn = (((lon * 2 + lat * 2.5 + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      const band = (turn / (Math.PI * 2)) * 63.999 + (Math.random() - 0.5) * 2.5;
 
       points.push({
         x: x * shell,
         y: y * shell,
         z: z * shell,
         wait: Math.random() * 0.3,
-        band,
-        // Round the equator a band pushes hard, near the poles it barely moves: the sphere
-        // swells into lobes instead of growing evenly like a balloon.
-        height: 0.05 + 0.26 * ring
+        band: Math.max(0, Math.min(63.999, band)),
+        // Round the equator a band pushes hardest and round the poles least, so the sphere
+        // swells into lobes. The three long, slow waves keep the surface uneven as it moves.
+        height: (0.30 + 0.45 * ring) * (0.7 + 0.3 * Math.cos(lon * 3 + lat * 2))
       });
     }
 

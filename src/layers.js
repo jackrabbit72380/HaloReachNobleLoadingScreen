@@ -30,6 +30,24 @@
     ['blob3d', 'Blob (audio)']
   ];
 
+  // Each layer shape is registered a second time under its own name (ball:layer, helix:layer),
+  // wrapping the same generator. That way the layer can have its own band height — the audio
+  // weight is baked into the heights of its points — without touching the target's copy of that
+  // shape, which keeps the shared setting.
+  let bandHeight = 0.5;
+
+  function registerLayerShapes() {
+    const api = engine();
+    if (!api || !api.shapes || api.shapes.layerShapes) return;
+    for (const [value] of SHAPES) {
+      const base = api.shapes[value];
+      if (typeof base !== 'function') continue;
+      api.shapes[value + ':layer'] = () =>
+        base().map((point) => Object.assign({}, point, { height: (Number(point.height) || 0) * bandHeight }));
+    }
+    api.shapes.layerShapes = true;
+  }
+
   // The engine lives in this window when the panel is docked, or in the window this page
   // opened. Both are same-origin, so one lookup covers either case.
   function engine() {
@@ -89,7 +107,7 @@
   const sourceSelect = el('select');
   for (const [value, label] of SHAPES) {
     const option = el('option', '', label);
-    option.value = value;
+    option.value = value + ':layer';
     sourceSelect.appendChild(option);
   }
   sourceRow.appendChild(sourceSelect);
@@ -109,12 +127,12 @@
   layerButton.addEventListener('click', () => {
     switchedOn = !switchedOn;
     paint();
-    apply({ LAYER_SRC: switchedOn ? chosen : 'off' });
+    apply({ LAYER_SRC: switchedOn ? chosen + ':layer' : 'off' });
   });
 
   sourceSelect.addEventListener('change', () => {
-    chosen = sourceSelect.value;
-    if (switchedOn) apply({ LAYER_SRC: chosen });
+    chosen = sourceSelect.value.replace(/:layer$/, '');
+    if (switchedOn) apply({ LAYER_SRC: chosen + ':layer' });
   });
 
   // One slider shape for all three settings: label, live value, and the config key it drives.
@@ -156,7 +174,37 @@
   slider('LAYER_ALPHA', 'Layer brightness', 0, 1, 0.05, 0.6,
     (v) => `${Math.round(v * 100)}%`);
 
-  panel.appendChild(el('div', 'note', 'Background layer puts a second point cloud behind the target — pick any shape, size it up until the camera sits inside it, and it turns on its own. It ignores Tilt, Pan and Pivot, so the target stays exactly where you put it.'));
+  // The layer's own audio weight. It scales the band heights of the layer's points, so the
+  // background can breathe gently behind a target that leaps, or the other way round.
+  const bandRow = el('div', 'row');
+  const bandShown = el('span', 'value', `${bandHeight.toFixed(2)}×`);
+  const bandInput = el('input');
+  bandInput.type = 'range';
+  bandInput.min = 0;
+  bandInput.max = 2;
+  bandInput.step = 0.05;
+  bandInput.value = bandHeight;
+  bandRow.append(el('span', 'label', 'Layer band height'), bandShown, bandInput);
+  panel.appendChild(bandRow);
+
+  bandInput.addEventListener('input', () => {
+    bandHeight = Number(bandInput.value);
+    bandShown.textContent = `${bandHeight.toFixed(2)}×`;
+  });
+
+  // Heights live in the built points, so the layer is rebuilt once the slider is let go rather
+  // than on every pixel of the drag.
+  bandInput.addEventListener('change', () => {
+    if (switchedOn) apply({ LAYER_SRC: chosen + ':layer' });
+  });
+
+  sliders.LAYER_BAND = (configValue) => {
+    bandHeight = Math.max(0, Math.min(2, Number(configValue) || 0));
+    bandInput.value = bandHeight;
+    bandShown.textContent = `${bandHeight.toFixed(2)}×`;
+  };
+
+  panel.appendChild(el('div', 'note', 'Background layer puts a second point cloud behind the target — pick any shape, size it up until the camera sits inside it, and it turns on its own. It ignores Tilt, Pan and Pivot, so the target stays exactly where you put it. Layer band height is this layer\u2019s own share of the audio, separate from the target\u2019s Band height.'));
 
   // The panel sits where it always did: straight after the Visualizer section.
   const visualizer = Array.from(root.children).find((node) => {
@@ -165,6 +213,7 @@
   });
   if (visualizer) visualizer.after(panel);
   else root.appendChild(panel);
+  registerLayerShapes();
   paint();
 
   /*--- Keeping the panel honest ---*/
@@ -175,10 +224,10 @@
     if (!config) return false;
 
     if ('LAYER_SRC' in config) {
-      const source = String(config.LAYER_SRC || 'off');
+      const source = String(config.LAYER_SRC || 'off').replace(/:layer$/, '');
       switchedOn = source !== 'off';
       if (switchedOn && SHAPES.some(([value]) => value === source)) chosen = source;
-      sourceSelect.value = chosen;
+      sourceSelect.value = chosen + ':layer';
       paint();
     }
     for (const [key, update] of Object.entries(sliders)) {

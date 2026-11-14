@@ -31,6 +31,7 @@
     let audioCtx = null;
     let analyser = null;
     let audioData = null;
+    let freqData = null;
     let audioOn = false;
     let audioRaf = 0;
     let sensitivity = 1;
@@ -285,7 +286,8 @@
     presetRow.style.marginTop = '10px';
     const presetSelect = el('select');
     const PRESETS = [
-        ['res/hpa-glyph.svg', 'Glyph (default)'],
+        ['spear', 'Spear (3D)'],
+        ['res/hpa-glyph.svg', 'Glyph (flat)'],
         ['torus', 'Torus'],
         ['atom', 'Atom'],
         ['cube', 'Cube'],
@@ -312,7 +314,9 @@
         window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 900);
     });
     randomButton.addEventListener('click', () => {
-        const shapeKeys = PRESETS.slice(1).map(([value]) => value);
+        const shapeKeys = PRESETS
+            .map(([value]) => value)
+            .filter((value) => value !== 'spear' && !value.startsWith('res/'));
         const pick = shapeKeys[Math.floor(Math.random() * shapeKeys.length)];
         presetSelect.value = pick;
         applyPreset(pick);
@@ -322,10 +326,17 @@
     function applyPreset(value) {
         const api = playerApi();
         if (!api) return needPlayer();
-        if (value.startsWith('res/')) api.setMask(value);
-        else api.setMask(makeMask(MASKS[value]));
+        const source = value === 'spear' || value.startsWith('res/') ? value : makeMask(MASKS[value]);
+        leaveEqualizer(api);
+        api.set({ MODE: 'shape', MASK_SRC: source });
         setStatus('swapping target', 'busy');
         window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1000);
+    }
+
+    function leaveEqualizer(api) {
+        if (!eqOn) return;
+        eqOn = false;
+        if (eqButton) eqButton.classList.remove('on');
     }
 
     /*--- Particles ---*/
@@ -367,6 +378,72 @@
         format: (v) => v.toFixed(0), live: false
     });
 
+    /*--- Camera ---*/
+
+    const cameraSection = section('Camera');
+
+    const viewButtons = el('div', 'buttons');
+    cameraSection.appendChild(viewButtons);
+
+    const outsideButton = el('button', 'on', 'Outside view');
+    const insideButton = el('button', '', 'Inside view');
+    outsideButton.type = 'button';
+    insideButton.type = 'button';
+    viewButtons.append(outsideButton, insideButton);
+
+    outsideButton.addEventListener('click', () => setView('orbit'));
+    insideButton.addEventListener('click', () => setView('inside'));
+
+    function setView(view) {
+        const api = playerApi();
+        if (!api) return needPlayer();
+        api.set({ VIEW: view });
+        outsideButton.classList.toggle('on', view === 'orbit');
+        insideButton.classList.toggle('on', view === 'inside');
+        setStatus(view === 'inside' ? 'inside the object' : 'outside view', '');
+    }
+
+    addRange(cameraSection, {
+        key: 'ZOOM', label: 'Zoom', min: 0.35, max: 6, step: 0.05, value: 1,
+        format: (v) => `${v.toFixed(2)}×`
+    });
+
+    addRange(cameraSection, {
+        key: 'ROTATE_SPEED', label: 'Spin speed', min: 0, max: 3, step: 0.05, value: 0.40,
+        format: (v) => `${v.toFixed(2)} rad/s`
+    });
+
+    cameraSection.appendChild(el('div', 'note', 'The wheel over the particle window zooms too. Inside view puts the camera in among the particles, so the spear sweeps past you.'));
+
+    /*--- Visualizer ---*/
+
+    const visualizerSection = section('Visualizer');
+    const visualizerButtons = el('div', 'buttons');
+    visualizerSection.appendChild(visualizerButtons);
+
+    const eqButton = el('button', '', 'Equalizer ring');
+    eqButton.type = 'button';
+    visualizerButtons.appendChild(eqButton);
+
+    let eqOn = false;
+
+    eqButton.addEventListener('click', () => {
+        const api = playerApi();
+        if (!api) return needPlayer();
+        eqOn = !eqOn;
+        eqButton.classList.toggle('on', eqOn);
+        api.set({ MODE: eqOn ? 'equalizer' : 'shape' });
+        setStatus(eqOn ? 'equalizer ring' : 'shape target', 'busy');
+        window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1000);
+    });
+
+    addRange(visualizerSection, {
+        key: 'EQ_HEIGHT', label: 'Band height', min: 0.4, max: 5, step: 0.1, value: 2.2,
+        format: (v) => v.toFixed(1)
+    });
+
+    visualizerSection.appendChild(el('div', 'note', 'A flat disc of 64 bars that turns with the model; each bar rises with its own frequency band once an audio source is listening.'));
+
     /*--- Timing ---*/
 
     const timingSection = section('Timing');
@@ -375,7 +452,7 @@
         format: (v) => `${(v / 1000).toFixed(2)} s`, live: false
     });
     addRange(timingSection, {
-        key: 'HOLD_MS', label: 'Hold', min: 300, max: 15000, step: 250, value: 4800,
+        key: 'HOLD_MS', label: 'Hold', min: 300, max: 30000, step: 500, value: 12000,
         format: (v) => `${(v / 1000).toFixed(2)} s`, live: false
     });
     addRange(timingSection, {
@@ -508,6 +585,7 @@
             analyser.fftSize = 1024;
             analyser.smoothingTimeConstant = 0.75;
             audioData = new Uint8Array(analyser.fftSize);
+            freqData = new Uint8Array(analyser.frequencyBinCount);
         }
         return audioCtx;
     }
@@ -612,7 +690,10 @@
         }
         captureMode = '';
         const api = playerApi();
-        if (api) api.setAudio(0);
+        if (api) {
+            api.setAudio(0);
+            api.setSpectrum(null);
+        }
         meterFill.style.width = '0%';
         syncAudioButtons();
         if (!silent) setStatus('audio off', '');
@@ -629,9 +710,32 @@
         const rms = Math.sqrt(sum / audioData.length);
         const level = Math.min(1, rms * 4 * sensitivity);
         const api = playerApi();
-        if (api) api.setAudio(level);
+
+        if (api) {
+            api.setAudio(level);
+            api.setSpectrum(spectrumBands());
+        }
+
         meterFill.style.width = `${(level * 100).toFixed(1)}%`;
         audioRaf = requestAnimationFrame(pumpAudio);
+    }
+
+    // 64 log-spaced bands, which is what the equalizer ring draws as columns.
+    function spectrumBands() {
+        const bands = new Float32Array(64);
+        if (!freqData) return bands;
+        analyser.getByteFrequencyData(freqData);
+        const bins = freqData.length;
+
+        for (let band = 0; band < bands.length; band++) {
+            const from = Math.floor(Math.pow(band / bands.length, 1.8) * bins);
+            const to = Math.max(from + 1, Math.floor(Math.pow((band + 1) / bands.length, 1.8) * bins));
+            let peak = 0;
+            for (let i = from; i < to && i < bins; i++) peak = Math.max(peak, freqData[i]);
+            bands[band] = Math.min(1, Math.pow(peak / 255, 0.8) * sensitivity * 0.95);
+        }
+
+        return bands;
     }
 
     /*--- Capture ---*/
@@ -722,7 +826,8 @@
         reader.onload = () => {
             const api = playerApi();
             if (!api) return needPlayer();
-            api.setMask(reader.result);
+            leaveEqualizer(api);
+            api.set({ MODE: 'shape', MASK_SRC: reader.result });
             setStatus(`swapped ${file.name.slice(0, 28)}`, 'busy');
             window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1000);
         };

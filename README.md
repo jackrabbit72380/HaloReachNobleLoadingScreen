@@ -68,7 +68,7 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 
 | Control | What it does |
 | :--- | :--- |
-| **Spin speed** | Radians per second of the endless turn. 0 freezes the pose. |
+| **Spin speed** | Turns per second of the endless turn — one turn is 360°. 0 freezes the pose. |
 | **Settle angle** | The yaw the assembly comes to rest at, in degrees. |
 | **Rebuild loop** | On: assemble, hold, fade, rebuild forever. Off: assemble once and keep turning. |
 
@@ -76,6 +76,7 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 
 | Control | What it does |
 | :--- | :--- |
+| **Spin speed** | Turns per second, first slider in the section, right above Zoom. |
 | **Zoom** | Camera distance, 0.35×–6×. The mouse wheel over the particle window does the same. |
 | **Outside view** | Orbit camera looking in at the object. |
 | **Inside view** | Camera sits inside the ball's shell (or just inside the spear's tip), so the shape wraps around you. |
@@ -87,7 +88,7 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 | **Particle window** | Open / raise / close the window the animation runs in. |
 | **Target** | Ball (3D), spear (3D), the flat glyph, six procedural shapes, or any image — load, drag-and-drop or paste, then **Rebuild**. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
-| **Camera** | Zoom, spin speed, settle angle, outside / inside view. |
+| **Camera** | Spin speed, zoom, settle angle, outside / inside view. |
 | **Visualizer** | Equalizer ring on/off and its band height. |
 | **Timing** | Assembly, hold and fade durations, plus the rebuild loop toggle. |
 | **Look** | Tint, glow falloff, chromatic rim, caption text and size. |
@@ -96,8 +97,8 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 | **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it — captured inside the particle window. |
 
 **Reset** in the top-right puts every setting back to the shipped defaults — in the particle
-window and in the panel — and starts the assembly over: ball target, 0.40 rad/s, settle angle 0°,
-loop on, tint `#a1d6ff`.
+window and in the panel — and starts the assembly over: ball target, 0.064 turns/s, settle angle
+0°, loop on, tint `#a1d6ff`.
 
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
@@ -128,7 +129,8 @@ stored or uploaded. Sensitivity scales the response; the meter shows the live le
 ```js
 HPA.set({ COLOR: [1, 0.4, 0.2], POINT_SIZE: 42 });  // any CONFIG key
 HPA.set({ VIEW: 'inside', ZOOM: 2.4 });             // camera
-HPA.set({ STOP_ANGLE: 90, LOOP: false });           // pose + endless turn
+HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + endless turn
+HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly settles at
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
 HPA.setMask('ball');                                // 'ball', 'spear' or an image URL / data URL
 HPA.rebuild();                                      // resample and restart
@@ -139,6 +141,9 @@ HPA.capture('image/png');                           // data URL
 HPA.record({ ms: 5000, mime: 'video/webm' });       // Promise<Blob>
 HPA.snapshot();                                     // counts + current config
 ```
+
+`ROTATE_SPEED` is radians per second in the API; the panel's **Spin speed** slider shows the same
+number in turns per second, so 0.064 turns/s is the default 0.40 rad/s.
 
 ## Flags
 
@@ -152,5 +157,5 @@ HPA.snapshot();                                     // counts + current config
 ## Defaults
 
 `CONFIG` at the top of `src/engine.js`: 3D ball target, 260-sample mask, 6 000 dust motes,
-7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s endless spin from a 0° settle angle, loop on,
-tint `#a1d6ff`.
+7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s (0.064 turns/s) endless spin from a 0° settle
+angle, loop on, tint `#a1d6ff`.

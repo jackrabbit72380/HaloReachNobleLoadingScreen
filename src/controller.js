@@ -5,6 +5,9 @@
  *  Runs in its own window and drives the animation in a second, separate window.
  *  Both pages are same-origin, so the controller keeps a live reference to the
  *  player and calls window.HPA directly — no embedding, no message protocol.
+ *
+ *  Every section of the panel is built in this file, in the order it appears:
+ *    Target, Particles, Camera, Show, Visualizer, Timing, Look, Effects, Audio, Capture
  */
 
 (() => {
@@ -167,6 +170,7 @@
         leaveEqualizer(api);
         await api.reset();
         syncControls(api.config);
+        resetShow();
         setStatus('reset to defaults', '');
         window.setTimeout(() => {
             if (connected && statusEl.textContent === 'reset to defaults') setStatus('connected', '');
@@ -356,15 +360,19 @@
         setStatus('rebuilding', 'busy');
         window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 900);
     });
-    randomButton.addEventListener('click', () => {
+    randomButton.addEventListener('click', randomShape);
+    presetSelect.addEventListener('change', () => applyPreset(presetSelect.value));
+
+    // One place picks the next target, so the button and the visualizer's shuffle agree.
+    function randomShape() {
         const shapeKeys = PRESETS
             .map(([value]) => value)
             .filter((value) => value !== 'ball' && value !== 'spear' && !value.startsWith('res/'));
         const pick = shapeKeys[Math.floor(Math.random() * shapeKeys.length)];
         presetSelect.value = pick;
         applyPreset(pick);
-    });
-    presetSelect.addEventListener('change', () => applyPreset(presetSelect.value));
+        return pick;
+    }
 
     function applyPreset(value) {
         const api = playerApi();
@@ -469,7 +477,212 @@
         format: (v) => `${v.toFixed(0)}°`
     });
 
+    // Aiming: the pitch of the object and where the view sits in the frame.
+    addRange(cameraSection, {
+        key: 'TILT', label: 'Tilt (object)', min: -90, max: 90, step: 1, value: 0,
+        format: (v) => `${v.toFixed(0)}°`
+    });
+
+    addRange(cameraSection, {
+        key: 'PAN_X', label: 'Pan left / right', min: -6, max: 6, step: 0.1, value: 0,
+        format: (v) => v.toFixed(1)
+    });
+
+    addRange(cameraSection, {
+        key: 'PAN_Y', label: 'Pan up / down', min: -6, max: 6, step: 0.1, value: 0,
+        format: (v) => v.toFixed(1)
+    });
+
+    const padRow = el('div', 'buttons');
+    padRow.style.marginTop = '10px';
+    cameraSection.appendChild(padRow);
+
+    function nudge(dx, dy) {
+        const api = playerApi();
+        const config = api && api.config ? api.config : {};
+        const clamp = (value) => Math.max(-9, Math.min(9, value));
+        const panX = clamp((Number(config.PAN_X) || 0) + dx);
+        const panY = clamp((Number(config.PAN_Y) || 0) + dy);
+        if (api) api.set({ PAN_X: panX, PAN_Y: panY });
+        controls.get('PAN_X').set(panX);
+        controls.get('PAN_Y').set(panY);
+    }
+
+    for (const [label, dx, dy, title] of [
+        ['◀', -0.25, 0, 'Move the object left'],
+        ['▲', 0, 0.25, 'Move the object up'],
+        ['▼', 0, -0.25, 'Move the object down'],
+        ['▶', 0.25, 0, 'Move the object right']
+    ]) {
+        const button = el('button', '', label);
+        button.type = 'button';
+        button.title = title;
+        button.addEventListener('click', () => nudge(dx, dy));
+        padRow.appendChild(button);
+    }
+
+    const headOnButton = el('button', '', 'Head-on');
+    headOnButton.type = 'button';
+    headOnButton.addEventListener('click', () => {
+        const api = playerApi();
+        if (api) api.set({ TILT: 0, PAN_X: 0, PAN_Y: 0 });
+        controls.get('TILT').set(0);
+        controls.get('PAN_X').set(0);
+        controls.get('PAN_Y').set(0);
+    });
+    padRow.appendChild(headOnButton);
+
     cameraSection.appendChild(el('div', 'note', 'The assembly eases to the settle angle, then turns on forever from there. The wheel over the particle window zooms too, and inside view puts the camera in among the particles.'));
+    cameraSection.appendChild(el('div', 'note', 'Tilt 0° looks at the object dead level; positive pitches the top away from you. The pad slides the view, and the arrow keys in the particle window do the same — hold shift for bigger steps. Head-on puts the tilt and the pan back to zero.'));
+
+    // A running particle window is the truth; show what it is actually set to.
+    window.setTimeout(() => {
+        const api = playerApi();
+        if (!api || !api.config) return;
+        for (const key of ['TILT', 'PAN_X', 'PAN_Y']) {
+            if (key in api.config) controls.get(key).set(api.config[key]);
+        }
+    }, 900);
+
+    /*--- Show ---*/
+
+    const SHOW_DEFAULTS = { mode: 'off', preset: 'pulse', pulse: 0.5, drift: 0.3, shuffle: 12 };
+    const SHOW_PRESETS = [
+        ['pulse', 'Pulse — punchy, steady shape'],
+        ['drift', 'Drift — slow colour and swell'],
+        ['chaos', 'Chaos — shuffles shape and colour']
+    ];
+    const SHOW_TINTS = [
+        [0.63, 0.84, 1.0],
+        [1.0, 0.55, 0.30],
+        [0.55, 1.0, 0.62],
+        [0.85, 0.55, 1.0],
+        [1.0, 0.85, 0.35],
+        [0.45, 1.0, 0.95],
+        [1.0, 0.42, 0.62]
+    ];
+    const SHOW_NOTES = {
+        off: 'Off — the panel is in charge of everything again.',
+        inside: 'Inside spin — the camera sits in the ball and it turns forever. Zoom out a touch for more room.',
+        visualizer: 'Visualizer — the zoom breathes and the tint walks with the audio level.',
+        rainbow: 'Rainbow — the tint sweeps the wheel on its own.'
+    };
+
+    let show = { ...SHOW_DEFAULTS };
+    let shuffleTimer = 0;
+
+    const showSection = section('Show');
+    const showButtons = el('div', 'buttons');
+    showSection.appendChild(showButtons);
+
+    const showModeButtons = new Map();
+    for (const [mode, label] of [['off', 'Off'], ['inside', 'Inside spin'], ['visualizer', 'Music visualizer'], ['rainbow', 'Rainbow']]) {
+        const button = el('button', mode === 'off' ? 'on' : '', label);
+        button.type = 'button';
+        button.addEventListener('click', () => applyShowMode(mode));
+        showButtons.appendChild(button);
+        showModeButtons.set(mode, button);
+    }
+
+    const showPresetRow = el('div', 'row wide');
+    showPresetRow.style.marginTop = '10px';
+    const showPresetSelect = el('select');
+    for (const [value, label] of SHOW_PRESETS) {
+        const option = el('option', '', label);
+        option.value = value;
+        showPresetSelect.appendChild(option);
+    }
+    showPresetSelect.addEventListener('change', () => {
+        show.preset = showPresetSelect.value;
+        pushShow();
+        scheduleShuffle();
+    });
+    showPresetRow.appendChild(showPresetSelect);
+    showSection.appendChild(showPresetRow);
+
+    addRange(showSection, {
+        key: 'SHOW_PULSE', label: 'Zoom pulse', min: 0, max: 1, step: 0.05, value: show.pulse,
+        format: (v) => `${Math.round(v * 100)}%`, live: false
+    }).addEventListener('input', () => {
+        show.pulse = Number(showSection.querySelectorAll('input[type=range]')[0].value);
+        pushShow();
+    });
+
+    addRange(showSection, {
+        key: 'SHOW_DRIFT', label: 'Colour drift', min: 0, max: 1, step: 0.05, value: show.drift,
+        format: (v) => `${Math.round(v * 100)}%`, live: false
+    }).addEventListener('input', () => {
+        show.drift = Number(showSection.querySelectorAll('input[type=range]')[1].value);
+        pushShow();
+    });
+
+    addRange(showSection, {
+        key: 'SHOW_SHUFFLE', label: 'Shuffle every', min: 4, max: 40, step: 1, value: show.shuffle,
+        format: (v) => `${v} s`, live: false
+    }).addEventListener('input', () => {
+        show.shuffle = Number(showSection.querySelectorAll('input[type=range]')[2].value);
+        scheduleShuffle();
+    });
+
+    const showNote = el('div', 'note', SHOW_NOTES.off);
+    showSection.appendChild(showNote);
+
+    // The autopilot itself lives in the particle window (src/show.js); this only steers it.
+    function pushShow() {
+        const api = playerApi();
+        if (!api || !api.show) return;
+        api.show({ mode: show.mode, preset: show.preset, pulse: show.pulse, drift: show.drift });
+    }
+
+    function applyShowMode(mode) {
+        show.mode = mode;
+        for (const [key, button] of showModeButtons) button.classList.toggle('on', key === mode);
+        showNote.textContent = SHOW_NOTES[mode];
+
+        const api = playerApi();
+        if (!api) {
+            showNote.textContent = `${SHOW_NOTES[mode]} Open the particle window to start it.`;
+            return;
+        }
+
+        if (mode === 'inside') {
+            api.set({ VIEW: 'inside', LOOP: false, STOP_ANGLE: 0 });
+        } else if (mode === 'off') {
+            api.set({ LOOP: true });
+        }
+
+        if (api.show) {
+            api.show({ mode, preset: show.preset, pulse: show.pulse, drift: show.drift });
+        }
+
+        scheduleShuffle();
+    }
+
+    // Chaos swaps the target and tint on a timer, using the same path as Random shape so the
+    // procedural targets are in the rotation as well as the ball and spear.
+    function scheduleShuffle() {
+        window.clearTimeout(shuffleTimer);
+        if (show.mode !== 'visualizer' || show.preset !== 'chaos') return;
+
+        shuffleTimer = window.setTimeout(() => {
+            const api = playerApi();
+            if (api) {
+                randomShape();
+                api.set({ COLOR: SHOW_TINTS[Math.floor(Math.random() * SHOW_TINTS.length)] });
+            }
+            scheduleShuffle();
+        }, Math.max(4, Number(show.shuffle) || 12) * 1000);
+    }
+
+    function resetShow() {
+        window.clearTimeout(shuffleTimer);
+        show = { ...SHOW_DEFAULTS };
+        for (const [key, button] of showModeButtons) button.classList.toggle('on', key === show.mode);
+        showPresetSelect.value = show.preset;
+        showNote.textContent = SHOW_NOTES[show.mode];
+        const api = playerApi();
+        if (api && api.show && api.show.reset) api.show.reset();
+    }
 
     /*--- Visualizer ---*/
 
@@ -850,6 +1063,23 @@
     }
 
     captureSection.appendChild(el('div', 'note', 'Video is captured inside the particle window from its canvas, so the caption overlay is not in the frame. MP4 depends on browser support.'));
+
+    // The target itself as a model file. Written in the particle window, where the geometry is.
+    const modelButtons = el('div', 'buttons');
+    modelButtons.style.marginTop = '10px';
+    captureSection.appendChild(modelButtons);
+
+    for (const [format, label] of [['obj', 'Model (.obj)'], ['ply', 'Model (.ply)']]) {
+        const button = el('button', '', label);
+        button.type = 'button';
+        button.addEventListener('click', () => {
+            const api = playerApi();
+            if (api && api.exportModel) api.exportModel(format);
+        });
+        modelButtons.appendChild(button);
+    }
+
+    captureSection.appendChild(el('div', 'note', 'The model is the chosen target as a point cloud in world units — one vertex per particle, no faces. Blender imports either file directly (File → Import → Wavefront .obj, or Stanford .ply), then instance a sphere or metaball on the points. A .blend cannot be written here: it is Blender’s own memory dump with that version’s schema, so only Blender can save one.'));
 
     const caps = {
         webp: (() => {

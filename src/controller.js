@@ -286,12 +286,13 @@
     presetRow.style.marginTop = '10px';
     const presetSelect = el('select');
     const PRESETS = [
+        ['ball', 'Ball (3D)'],
         ['spear', 'Spear (3D)'],
         ['res/hpa-glyph.svg', 'Glyph (flat)'],
         ['torus', 'Torus'],
         ['atom', 'Atom'],
         ['cube', 'Cube'],
-        ['sphere', 'Sphere'],
+        ['sphere', 'Sphere (flat)'],
         ['helix', 'Helix'],
         ['pyramid', 'Pyramid'],
         ['star', 'Star']
@@ -316,7 +317,7 @@
     randomButton.addEventListener('click', () => {
         const shapeKeys = PRESETS
             .map(([value]) => value)
-            .filter((value) => value !== 'spear' && !value.startsWith('res/'));
+            .filter((value) => value !== 'ball' && value !== 'spear' && !value.startsWith('res/'));
         const pick = shapeKeys[Math.floor(Math.random() * shapeKeys.length)];
         presetSelect.value = pick;
         applyPreset(pick);
@@ -326,7 +327,9 @@
     function applyPreset(value) {
         const api = playerApi();
         if (!api) return needPlayer();
-        const source = value === 'spear' || value.startsWith('res/') ? value : makeMask(MASKS[value]);
+        const source = value === 'ball' || value === 'spear' || value.startsWith('res/')
+            ? value
+            : makeMask(MASKS[value]);
         leaveEqualizer(api);
         api.set({ MODE: 'shape', MASK_SRC: source });
         setStatus('swapping target', 'busy');

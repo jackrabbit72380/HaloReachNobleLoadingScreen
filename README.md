@@ -1,9 +1,9 @@
 # Holographic Particle Accelerator
 
 A WebGL2 particle animation. Thousands of points fly in from a sphere and assemble a real 3D
-spear — or any image you point them at — then keep turning, hold, and rebuild. A separate
-controller window drives it: swap the target, change colour and effects, zoom, move the camera
-inside the object, react to music, capture PNG / WebP / video.
+ball — or a spear, or any image you point them at — then keep turning, hold, and rebuild. A
+separate controller window drives it: swap the target, change colour and effects, zoom, move the
+camera inside the object, react to music, capture PNG / WebP / video.
 
 Written by **Jackrabbit72380**. No libraries, no build step.
 
@@ -15,7 +15,7 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | `src/relay.js` | Offers the particle window to its opener, so a reloaded panel re-attaches. |
 | `src/controller.js` | Panel logic and the link to the particle window. |
 | `src/style.css`, `src/controller.css` | Styling. |
-| `res/hpa-glyph.svg` | Optional flat target (the default is the 3D spear). |
+| `res/hpa-glyph.svg` | Optional flat target (the default is the 3D ball). |
 
 ## Run
 
@@ -48,12 +48,12 @@ yourself and use the API from that window.
 
 ## The shape
 
-The default target is a 3D spear generated inside the engine: pommel, ferrule, wrapped shaft,
-socket collar and a leaf blade with a lens cross-section, sampled on its surfaces (~12 000
-points). It lies along X, so the spin shows every side of the blade.
+The default target is a 3D ball: a sphere sampled on its surface with 24 meridians, 12 parallels
+and a skin of scattered points between them (~10 800 points, radius 2.07 in world units), so it
+reads as a globe rather than a fuzzy cloud.
 
-Any PNG / JPEG / WebP / SVG still works: it is sampled flat with depth, and procedural shapes
-(torus, atom, cube, sphere, helix, pyramid, star) are drawn in the panel and fed in the same way.
+Also built in: a 3D spear (pommel, ferrule, wrapped shaft, socket collar and a leaf blade along
+X), the flat glyph, six procedural 2D shapes, and any PNG / JPEG / WebP / SVG you load.
 
 ### Turning
 
@@ -77,14 +77,14 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 | :--- | :--- |
 | **Zoom** | Camera distance, 0.35×–6×. The mouse wheel over the particle window does the same. |
 | **Outside view** | Orbit camera looking in at the object. |
-| **Inside view** | Camera sits inside the particle cloud, close to the spear's axis, so the spear sweeps past you. |
+| **Inside view** | Camera sits inside the ball's shell (or just inside the spear's tip), so the shape wraps around you. |
 
 ## Controller
 
 | Section | What it does |
 | :--- | :--- |
 | **Particle window** | Open / raise / close the window the animation runs in. |
-| **Target** | Spear (3D), the flat glyph, six procedural shapes, or any image — load, drag-and-drop or paste, then **Rebuild**. |
+| **Target** | Ball (3D), spear (3D), the flat glyph, six procedural shapes, or any image — load, drag-and-drop or paste, then **Rebuild**. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
 | **Camera** | Zoom, spin speed, settle angle, outside / inside view. |
 | **Visualizer** | Equalizer ring on/off and its band height. |
@@ -125,7 +125,7 @@ HPA.set({ COLOR: [1, 0.4, 0.2], POINT_SIZE: 42 });  // any CONFIG key
 HPA.set({ VIEW: 'inside', ZOOM: 2.4 });             // camera
 HPA.set({ STOP_ANGLE: 90, LOOP: false });           // pose + endless turn
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
-HPA.setMask('spear');                               // 'spear' or an image URL / data URL
+HPA.setMask('ball');                                // 'ball', 'spear' or an image URL / data URL
 HPA.rebuild();                                      // resample and restart
 HPA.setAudio(0.7);                                  // 0..1, drives size and glow
 HPA.setSpectrum(bands);                             // Float32Array(64), 0..1 per band
@@ -145,6 +145,6 @@ HPA.snapshot();                                     // counts + current config
 
 ## Defaults
 
-`CONFIG` at the top of `src/engine.js`: 3D spear target, 260-sample mask, 6 000 dust motes,
+`CONFIG` at the top of `src/engine.js`: 3D ball target, 260-sample mask, 6 000 dust motes,
 7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s endless spin from a 0° settle angle, loop on,
 tint `#a1d6ff`.

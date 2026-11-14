@@ -29,15 +29,24 @@
 
     for (let i = 0; i < COUNT; i++) {
       // Fibonacci sphere: even coverage all the way round, with no poles to pinch and no seam.
-      const y = 1 - (2 * (i + 0.5)) / COUNT;
-      const ring = Math.sqrt(Math.max(0, 1 - y * y));
+      const up = 1 - (2 * (i + 0.5)) / COUNT;
+      const ring = Math.sqrt(Math.max(0, 1 - up * up));
       const phi = i * GOLDEN;
-      const x = Math.cos(phi) * ring;
-      const z = Math.sin(phi) * ring;
+      const across = Math.cos(phi) * ring;
+      const through = Math.sin(phi) * ring;
+
+      // The ball arrives a quarter turn over, like an imported model that came in Z-up: its
+      // equator — the band that swells hardest — runs up and down instead of round the middle.
+      // Turned that way, its ripples sweep across the face as it spins, so it reads as turning
+      // exactly like the other shapes instead of sitting there looking round.
+      const x = across;
+      const y = through;
+      const z = -up;
 
       const shell = radius * (0.995 + Math.random() * 0.01);
-      const lon = Math.atan2(z, x);
-      const lat = Math.asin(Math.max(-1, Math.min(1, y)));
+      const lon = Math.atan2(through, across);
+      const lat = Math.asin(Math.max(-1, Math.min(1, up)));
+      const girth = ring;
 
       // Bands run diagonally over the surface — twice round the sphere and twice pole to pole —
       // so a loud band travels across it as a wave instead of lifting one smooth shell. The
@@ -53,7 +62,7 @@
         band: Math.max(0, Math.min(63.999, band)),
         // Round the equator a band pushes hardest and round the poles least, so the sphere
         // swells into lobes. The three long, slow waves keep the surface uneven as it moves.
-        height: (0.30 + 0.45 * ring) * (0.7 + 0.3 * Math.cos(lon * 3 + lat * 2))
+        height: (0.30 + 0.45 * girth) * (0.7 + 0.3 * Math.cos(lon * 3 + lat * 2))
       });
     }
 

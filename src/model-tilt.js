@@ -4,8 +4,11 @@
  *
  *  Some exporters — Blender's own default among them — write their geometry standing up along
  *  Z, so a model arrives on its side with a 90 degree tilt. This adds "Apply 90° tilt" to the
- *  Target section: ticked, a model is turned a quarter turn about X on its way in, and a model
+ *  model import: ticked, a model is turned a quarter turn about X on its way in, and a model
  *  already on screen turns with the tick, so the fix can be checked without importing again.
+ *
+ *  It belongs to the model file, not to the shape list, so it stays out of sight until Model
+ *  file… is used, and goes away again when a different target is picked.
  */
 
 (() => {
@@ -47,6 +50,7 @@
       const result = await readModel(file);
       if (intake.straight) {
         model = { straight: intake.straight, turned: intake.turned || tilt(intake.straight) };
+        reveal();
       }
       return result;
     } finally {
@@ -69,6 +73,7 @@
 
   const style = document.createElement('style');
   style.textContent = [
+    '.tilt-row[hidden]{display:none!important}',
     '.tilt-row{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:2px 0 8px}',
     '.tilt-row input[type="checkbox"]{width:16px;height:16px;margin:0;flex:0 0 auto;cursor:pointer;accent-color:#8fd8ff}',
     '.tilt-row label{margin:0;flex:1 1 auto;text-align:left;font-size:12px;cursor:pointer;opacity:.85}'
@@ -97,10 +102,43 @@
     if (buttons) buttons.after(row);
     else target.appendChild(row);
   }
+  row.hidden = true;
 
   box.addEventListener('change', () => {
     turnedOn = box.checked;
     if (!model) return;
     show(turnedOn ? model.turned : model.straight);
   });
+
+  /*--- When it shows ---*/
+
+  function reveal() {
+    row.hidden = false;
+  }
+
+  const modelButton = Array.from(document.querySelectorAll('button')).find(
+    (button) => /^model file/i.test(button.textContent.trim())
+  );
+  if (modelButton) {
+    modelButton.addEventListener('click', reveal);
+  }
+
+  // Picking another target puts the model away, so the box goes with it.
+  const presetSelect = target ? target.querySelector('select') : null;
+  if (presetSelect) {
+    presetSelect.addEventListener('change', () => {
+      if (presetSelect.value !== 'mesh') row.hidden = true;
+    });
+  }
+
+  // A model on screen keeps it on show, even after a reload of the panel.
+  let settleTries = 0;
+  const settle = window.setInterval(() => {
+    if (HPA.config && HPA.config.MASK_SRC === 'mesh') {
+      reveal();
+      window.clearInterval(settle);
+    } else if (++settleTries > 20) {
+      window.clearInterval(settle);
+    }
+  }, 700);
 })();

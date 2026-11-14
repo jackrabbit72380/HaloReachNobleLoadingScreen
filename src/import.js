@@ -326,6 +326,13 @@
         api.set({ MODE: 'shape' });
         await api.setPointCloud(points);
 
+        // Frame the whole model as it arrives. Its size is whatever the file says, so the zoom
+        // you were using for the last target has nothing to do with it — without this a wide
+        // model lands half outside the frame, and the Zoom slider then looks stuck, because
+        // everything past about 2× is already inside the model. 0.35 is the slider's floor.
+        const fit = api.fitZoom ? api.fitZoom() : 1;
+        if (Number.isFinite(fit)) api.set({ ZOOM: Math.max(0.35, Math.min(6, fit)) });
+
         return {
             vertices: Math.floor(mesh.vertices.length / 3),
             points: points.length,

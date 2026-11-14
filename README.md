@@ -120,9 +120,9 @@ with — a reset really is the fresh-page pose.
 | **Spin speed** | Turns per second, first slider in the section, right above the three turn buttons. Negative turns it the other way. |
 | **Turn axis** | Y (turntable), X (tumble) or Z (roll) — the axis the endless turn goes round. |
 | **Infinite rotation** | Checkbox: assemble once, then turn forever — no hold, no fade, no rebuild. The same setting as **Timing → Rebuild loop** off, and the two move together. |
-| **Zoom** | Camera distance, 0.35×–6×. The mouse wheel over the particle window does the same. |
+| **Zoom** | Camera distance, 0.35×–6× on the slider; the mouse wheel over the particle window goes down to 0.15×. Pull back below 1× to make room, push in past it to move through the target. |
 | **Outside view** | Orbit camera looking in at the object. |
-| **Inside view** | Camera sits inside the ball's shell (or just inside the spear's tip), so the shape wraps around you. |
+| **Inside view** | Camera sits just inside the target's own shell — the ball's, the spear's tip's, or an imported model's surface — so the shape wraps around you. |
 | **Tilt** | Pitch of the object in degrees. 0° is dead head-on; positive tips the top away from you. |
 | **Pivot X / Y / Z** | The point the turn goes around, in world units out from the middle of the target. 0 is the target's own centre. |
 | **Pivot: centre** | Puts the axis back at 0, 0, 0. |
@@ -239,8 +239,12 @@ longest side, its triangles are sampled area-weighted up to ~18 000 points (so a
 8 vertices, 12 triangles — arrives as a solid cube rather than eight dots), and files with no
 faces come in as their vertices. Because the points keep their Z, the import behaves like the
 other shapes: turning shows the far side, **Tilt** shows the top, inside view walks into it, and
-**Capture → Model** writes the same points back out. Density, depth and point size behave as for
-any other target. The target list then reads **Imported mesh (3D)**.
+**Capture → Model** writes the same points back out. Zoom is set to frame the whole model as it
+loads — a file's size is its own, so the zoom you had for the last target would otherwise leave
+it half out of the frame — and inside view is placed relative to the model's size too, so the
+camera sits just inside its surface instead of somewhere in the middle of its points. Density,
+depth and point size behave as for any other target; the target list then reads **Imported mesh
+(3D)**.
 
 A flat model — a map, a plan, a relief — arrives flat, and two settings are what make it behave:
 **Turn axis** for the direction of the sweep (see *Where it turns, and which way*) and **Pivot**
@@ -288,6 +292,7 @@ HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
 HPA.setMask('torus');                               // a shape name, 'mesh', or an image URL
 HPA.setPointCloud(points);                          // any [{x, y, z}, …] as the target, in 3D
 HPA.shapes.spiral = () => points;                   // another shape, if you want one
+HPA.fitZoom();                                      // the zoom that frames the whole target
 HPA.rebuild();                                      // resample and restart
 HPA.resetRotation();                                // endless turn back to the settle angle
 HPA.reset();                                        // shipped settings back, assemble again

@@ -26,6 +26,7 @@
     let player = null;
     let connected = false;
     let pollTimer = 0;
+    let resuming = !!window.HPA_PLAYER;
 
     let audioCtx = null;
     let analyser = null;
@@ -39,13 +40,67 @@
 
     /*--- Player window ---*/
 
-    function playerApi() {
-        if (!player || player.closed) return null;
-        try {
-            return player.HPA || null;
-        } catch (error) {
-            return null;   // navigated somewhere we cannot touch
+    // The particle window keeps offering its own handle to the opener (see announce() in
+    // engine.js), so reloading this page no longer costs the connection: the next poll
+    // picks the running window back up and nothing is navigated or restarted.
+    function attachedPlayer() {
+        if (player && !player.closed) {
+            try {
+                if (player.HPA) return player;
+            } catch (error) {
+                /* navigated somewhere we cannot touch */
+            }
         }
+
+        const offered = window.HPA_PLAYER;
+        if (offered && offered !== window) {
+            try {
+                if (!offered.closed && offered.HPA) {
+                    if (!player) resuming = true;
+                    player = offered;
+                    return player;
+                }
+            } catch (error) {
+                /* not ours to touch */
+            }
+        }
+
+        return null;
+    }
+
+    function playerApi() {
+        const live = attachedPlayer();
+        return live ? live.HPA : null;
+    }
+
+    function playerUrl() {
+        return new URL('index.html', window.location.href).href;
+    }
+
+    // Asks the browser for the window of that name as it is — an empty URL means "do not
+    // navigate" — so a window left over from before this page was refreshed is reused
+    // exactly as it stands instead of being pointed at index.html again.
+    function reclaim() {
+        let existing;
+        try {
+            existing = window.open('', PLAYER_NAME);
+        } catch (error) {
+            return null;
+        }
+        if (!existing || existing === window) return null;
+
+        try {
+            if (existing.closed) return null;
+            if (existing.HPA) return existing;          // still running: reuse untouched
+            if (existing.document && existing.document.URL === 'about:blank') {
+                existing.location.replace(playerUrl()); // empty shell the browser just made
+                return existing;
+            }
+        } catch (error) {
+            return null;
+        }
+
+        return null;                                    // showing another site: leave it alone
     }
 
     function needPlayer() {
@@ -56,11 +111,21 @@
     }
 
     function openPlayer() {
-        if (player && !player.closed) {
-            player.focus();
+        const live = attachedPlayer();
+        if (live) {
+            live.focus();
+            setStatus('reconnected — animation kept running', '');
+            updateConnection();
             return;
         }
-        player = window.open('index.html', PLAYER_NAME, PLAYER_FEATURES);
+        const reclaimed = reclaim();
+        if (reclaimed) {
+            player = reclaimed;
+            setStatus('reconnected — animation kept running', '');
+            poll();
+            return;
+        }
+        player = window.open(playerUrl(), PLAYER_NAME, PLAYER_FEATURES);
         if (!player) {
             setStatus('popup blocked — allow popups', 'bad');
             return;
@@ -70,13 +135,16 @@
     }
 
     function focusPlayer() {
-        if (player && !player.closed) player.focus();
+        const live = attachedPlayer();
+        if (live) live.focus();
         else needPlayer();
     }
 
     function closePlayer() {
-        if (player && !player.closed) player.close();
+        const live = attachedPlayer();
+        if (live) live.close();
         player = null;
+        try { delete window.HPA_PLAYER; } catch (error) { /* already gone */ }
         connected = false;
         setStatus('particle window closed', '');
         updateConnection();
@@ -88,7 +156,7 @@
 
     function updateConnection() {
         const api = playerApi();
-        const open = !!(player && !player.closed);
+        const open = !!player && !player.closed;
         connectionEl.textContent = api
             ? `Connected to the particle window${api.snapshot ? ` — ${api.snapshot().count.toLocaleString()} particles` : ''}. Every control below applies live.`
             : open
@@ -103,7 +171,8 @@
 
         if (api && !connected) {
             connected = true;
-            setStatus('connected', '');
+            setStatus(resuming ? 'reconnected — animation kept running' : 'connected', '');
+            resuming = false;
         } else if (!api && connected) {
             connected = false;
             setStatus(player && !player.closed ? 'reconnecting…' : 'particle window closed', 'bad');

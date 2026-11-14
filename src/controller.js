@@ -2,9 +2,10 @@
  *  Jackrabbit72380
  *  2026
  *
- *  Runs in its own window and drives the animation in a second, separate window.
- *  Both pages are same-origin, so the controller keeps a live reference to the
- *  player and calls window.HPA directly — no embedding, no message protocol.
+ *  Drives the animation in the window it lives in (the dock in index.html) or in a separate
+ *  window it opens (controller.html). Both pages are same-origin: the controller keeps a
+ *  reference to the player window and calls window.HPA on it directly, with no embedding and
+ *  no message protocol.
  *
  *  Every section of the panel is built here, in the order it appears:
  *    Target, Particles, Camera, Show, Visualizer, Timing, Look, Effects, Audio, Capture
@@ -47,7 +48,8 @@
 
     // The particle window keeps offering its own handle to the opener (see announce() in
     // engine.js), so reloading this page no longer costs the connection: the next poll
-    // picks the running window back up and nothing is navigated or restarted.
+    // picks the running window back up and nothing is navigated or restarted. When the panel
+    // is docked in the particle window itself, its handle is a stand-in for this window.
     function attachedPlayer() {
         if (player && !player.closed) {
             try {
@@ -321,11 +323,19 @@
 
     const loadButton = el('button', '', 'Load image…');
     loadButton.type = 'button';
+    const modelButton = el('button', '', 'Model file…');
+    modelButton.type = 'button';
     const rebuildButton = el('button', '', 'Rebuild');
     rebuildButton.type = 'button';
     const randomButton = el('button', '', 'Random shape');
     randomButton.type = 'button';
-    sourceButtons.append(loadButton, rebuildButton, randomButton);
+    sourceButtons.append(loadButton, modelButton, rebuildButton, randomButton);
+
+    const modelInput = el('input');
+    modelInput.type = 'file';
+    modelInput.accept = '.obj,.ply';
+    modelInput.hidden = true;
+    sourceSection.appendChild(modelInput);
 
     const presetRow = el('div', 'row wide');
     presetRow.style.marginTop = '10px';
@@ -349,9 +359,15 @@
     }
     presetRow.appendChild(presetSelect);
     sourceSection.appendChild(presetRow);
-    sourceSection.appendChild(el('div', 'note', 'Any PNG, JPEG, WebP or SVG works — dark pixels on light, or a transparent cut-out. Drop or paste it anywhere on this page.'));
+    sourceSection.appendChild(el('div', 'note', 'Any PNG, JPEG, WebP or SVG works — dark pixels on light, or a transparent cut-out. Drop or paste it anywhere on this page. A mesh comes in as a .obj or .ply exported from Blender, seen from the front.'));
 
     loadButton.addEventListener('click', () => fileInput.click());
+    modelButton.addEventListener('click', () => modelInput.click());
+    modelInput.addEventListener('change', () => {
+        const file = modelInput.files && modelInput.files[0];
+        if (file) importModel(file);
+        modelInput.value = '';
+    });
     rebuildButton.addEventListener('click', () => {
         const api = playerApi();
         if (!api) return needPlayer();
@@ -383,6 +399,28 @@
         api.set({ MODE: 'shape', MASK_SRC: source });
         setStatus('swapping target', 'busy');
         window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1000);
+    }
+
+    // A mesh from Blender's OBJ / PLY export; src/import.js does the reading and hands back
+    // how many vertices it found.
+    async function importModel(file) {
+        const api = playerApi();
+        if (!api) return needPlayer();
+        if (!api.importModel) {
+            setStatus('model import needs the particle page', 'bad');
+            return;
+        }
+
+        presetSelect.value = 'ball';
+        setStatus(`importing ${String(file.name).slice(0, 22)}`, 'busy');
+        try {
+            const result = await api.importModel(file);
+            leaveEqualizer(api);
+            setStatus(`imported ${result.vertices.toLocaleString()} vertices`, 'busy');
+            window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1800);
+        } catch (error) {
+            setStatus(String((error && error.message) || error), 'bad');
+        }
     }
 
     function leaveEqualizer(api) {
@@ -1119,7 +1157,7 @@
     stopButton.disabled = true;
     mp4Button.title = caps.mp4 ? '' : 'This browser cannot record MP4 from a canvas';
 
-    /*--- Image loading ---*/
+    /*--- Image and mesh loading ---*/
 
     fileInput.addEventListener('change', () => {
         const file = fileInput.files && fileInput.files[0];
@@ -1128,6 +1166,8 @@
     });
 
     function loadFile(file) {
+        if (/\.(obj|ply)$/i.test(file.name || '')) return importModel(file);
+
         if (!file.type.startsWith('image/')) {
             setStatus('not an image', 'bad');
             return;

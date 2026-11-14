@@ -1,22 +1,24 @@
 # Holographic Particle Accelerator
 
 A WebGL2 particle animation. Thousands of points fly in from a sphere and assemble a real 3D
-ball — or a spear, or any image you point them at — then keep turning, hold, and rebuild. A
-separate controller window drives it: swap the target, change colour and effects, zoom, move the
-camera inside the object, react to music, capture PNG / WebP / video.
+ball — or a spear, or a mesh you bring in from Blender — then keep turning, hold, and rebuild.
+The controls live in a panel docked down the right-hand side of the same window: **Home** opens
+it, **Home** closes it.
 
 Written by **Jackrabbit72380**. No libraries, no build step.
 
 | File | Purpose |
 | :--- | :--- |
-| `index.html` | The animation (the particle window). Flags below. |
-| `controller.html` | The control panel, in its own window. |
+| `index.html` | The animation, with the controller docked on the right. Flags below. |
+| `controller.html` | The same panel in a window of its own, for a second screen. |
 | `src/engine.js` | The whole engine — shapes, buffers, shaders, `window.HPA`. |
+| `src/dock.js` | Opens and closes the docked panel with Home, and bridges it to this window. |
 | `src/relay.js` | Offers the particle window to its opener, so a reloaded panel re-attaches. |
 | `src/reset.js` | `HPA.reset()` — puts the shipped settings back. |
 | `src/show.js` | `HPA.show()` — the autopilot behind the show modes. |
 | `src/export.js` | `HPA.exportModel()` — the target as an OBJ / PLY model. |
-| `src/controller.js` | Every section of the panel, in the order it appears, and the link to the particle window. |
+| `src/import.js` | `HPA.importModel()` — a Blender OBJ / PLY mesh as the target. |
+| `src/controller.js` | Every section of the panel, in the order it appears. |
 | `src/style.css`, `src/controller.css` | Styling. |
 | `res/hpa-glyph.svg` | Optional flat target (the default is the 3D ball). |
 
@@ -26,28 +28,32 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 python3 -m http.server 3000
 ```
 
-1. Open `http://localhost:3000/controller.html`.
-2. Press **Open particle window** — the animation opens in its own window.
-3. Drive it from the panel. **Bring to front** raises it, **Close** disconnects.
+1. Open `http://localhost:3000/`.
+2. Press **Home** — the controller slides in from the right. Press **Home** again to close it.
+3. Drive it. The animation keeps running behind the panel and every control applies live.
 
 `file://` will not work — reading a mask image needs HTTP.
 
-### How the two windows talk
+The panel is the same code in both places. `src/controller.js` reaches the engine through a
+player handle and calls `window.HPA` on it; docked, that window is the one it is already in, so
+`src/dock.js` hands it a stand-in (`window.HPA_PLAYER = { HPA: window.HPA }`) and nothing else
+changes. Home is only taken when a text field does not need it, so typing a caption keeps its
+own Home key.
 
-Both pages are same-origin, so the controller holds a live reference to the window returned by
-`window.open` and calls `window.HPA` on it directly. There is no embedding, no iframe and no
-message protocol: when a slider moves, the controller mutates the engine's `CONFIG` in the other
-window and the next frame shows it. The panel re-checks the link every 700 ms, so closing the
-particle window shows *particle window closed* instead of silently doing nothing.
+### The separate window
 
-Reloading the controller does not cost the animation. `src/relay.js` keeps offering the player
+Open `controller.html` instead — or on a second screen, alongside the animation — and press
+**Open particle window**. Both pages are same-origin, so the panel holds a live reference to the
+window returned by `window.open` and calls `window.HPA` on it directly: no embedding, no iframe,
+no message protocol. The panel re-checks the link every 700 ms, so closing the particle window
+shows *particle window closed* instead of silently doing nothing.
+
+Reloading that panel does not cost the animation. `src/relay.js` keeps offering the player
 window to whoever opened it, so the panel finds it again on the next check and says
 *reconnected — animation kept running*; **Open particle window** then reclaims that window as it
-stands rather than pointing it at `index.html` again. Only a genuinely missing window is opened
-fresh.
+stands rather than pointing it at `index.html` again.
 
-If popups are blocked the panel says so — allow popups for the page, or open `index.html`
-yourself and use the API from that window.
+If popups are blocked the panel says so — allow popups for the page, or use the docked panel.
 
 ## The shape
 
@@ -56,7 +62,8 @@ and a skin of scattered points between them (~10 800 points, radius 2.07 in worl
 reads as a globe rather than a fuzzy cloud.
 
 Also built in: a 3D spear (pommel, ferrule, wrapped shaft, socket collar and a leaf blade along
-X), the flat glyph, six procedural 2D shapes, and any PNG / JPEG / WebP / SVG you load.
+X), the flat glyph, six procedural 2D shapes, any PNG / JPEG / WebP / SVG you load, and any OBJ /
+PLY mesh from Blender.
 
 ### Turning
 
@@ -125,8 +132,7 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 
 | Section | What it does |
 | :--- | :--- |
-| **Particle window** | Open / raise / close the window the animation runs in. |
-| **Target** | Ball (3D), spear (3D), the flat glyph, six procedural shapes, or any image — load, drag-and-drop or paste, then **Rebuild**. |
+| **Target** | Ball (3D), spear (3D), the flat glyph, six procedural shapes, any image, or a mesh file — load, drop or paste, then **Rebuild**. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
 | **Camera** | Spin speed, zoom, settle angle, tilt and pan, outside / inside view. |
 | **Show** | Inside spin, music visualizer and rainbow modes, their presets, and the shuffle timer. |
@@ -137,9 +143,9 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 | **Audio** | Microphone, system audio or a local audio file. Level drives size and brightness. |
 | **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it, and the model download — captured inside the particle window. |
 
-**Reset** in the top-right puts every setting back to the shipped defaults — in the particle
-window and in the panel — and starts the assembly over: ball target, 0.064 turns/s, settle angle
-0°, tilt 0°, no pan, loop on, tint `#a1d6ff`, show mode off.
+**Reset** in the top-right puts every setting back to the shipped defaults — in the engine and
+in the panel — and starts the assembly over: ball target, 0.064 turns/s, settle angle 0°,
+tilt 0°, no pan, loop on, tint `#a1d6ff`, show mode off.
 
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
@@ -148,13 +154,27 @@ the frame.
 ### Model export
 
 **Capture → Model (.obj)** or **Model (.ply)** writes the target you are looking at — ball, spear,
-glyph, a procedural shape or a loaded image — as a point cloud: one vertex per particle, world
-units, Y up, no faces. Blender imports either one in a single step (File → Import → Wavefront
-`.obj`, or New Stanford `.ply`); instance a sphere or metaball on the points to give them body.
+glyph, a procedural shape, a loaded image or an imported mesh — as a point cloud: one vertex per
+particle, world units, Y up, no faces. Blender imports either one in a single step (File → Import
+→ Wavefront `.obj`, or New Stanford `.ply`); instance a sphere or a metaball on the points to give
+them body.
 
 There is no `.blend` export, and it is not a missing feature: a `.blend` is a dump of Blender's
 own memory plus the DNA schema of the version that wrote it, and no writer exists outside
 Blender itself. The two formats above are how the geometry gets into Blender without it.
+
+### Model import
+
+**Target → Model file…**, or drop the file on the page, reads a mesh exported from Blender —
+**Wavefront `.obj`**, or **Stanford `.ply`** (ASCII or little-endian binary) — and rebuilds the
+target from its vertices, seen from the front: X across, Y up, fitted to the frame. Density,
+depth and point size behave as for any other target, and **Capture → Model** writes it back out.
+
+A `.blend` itself cannot be read here, for the same reason it cannot be written: it is Blender's
+memory image plus that version's DNA schema, and Blender now saves it zstd-compressed by default,
+so a reader would mean a full DNA parser and a zstd decompressor inside the page. The one step
+that gets a `.blend` in is **File → Export → Wavefront (.obj)** in Blender (Stanford `.ply` also
+works).
 
 ## Equalizer ring
 
@@ -176,7 +196,7 @@ stored or uploaded. Sensitivity scales the response; the meter shows the live le
 
 ## Engine API
 
-`index.html` exposes `window.HPA`, which is what the controller calls:
+`index.html` exposes `window.HPA`, which is what the panel calls:
 
 ```js
 HPA.set({ COLOR: [1, 0.4, 0.2], POINT_SIZE: 42 });  // any CONFIG key
@@ -193,6 +213,7 @@ HPA.show({ mode: 'visualizer', preset: 'chaos', pulse: 0.6, drift: 0.4 });
 HPA.show.reset();                                   // autopilot off, picture restored
 HPA.geometry();                                     // the target's points, [{x, y, z}, …]
 HPA.exportModel('obj');                             // download the target ('obj' | 'ply')
+HPA.importModel(file);                              // OBJ / PLY mesh in, as the target
 HPA.setAudio(0.7);                                  // 0..1, drives size and glow
 HPA.setSpectrum(bands);                             // Float32Array(64), 0..1 per band
 HPA.capture('image/png');                           // data URL

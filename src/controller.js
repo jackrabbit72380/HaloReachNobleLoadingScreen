@@ -945,10 +945,13 @@
     const timingButtons = el('div', 'buttons');
     timingButtons.style.marginTop = '10px';
     timingSection.appendChild(timingButtons);
-    addToggle(timingButtons, { key: 'LOOP', label: 'Rebuild loop', value: true });
+    const loopButton = addToggle(timingButtons, { key: 'LOOP', label: 'Rebuild loop', value: true });
 
     // The Camera section's Infinite rotation checkbox is the same key, so switching the loop on
-    // or off here has to move it too.
+    // or off here has to move it too. The toggle's own click writes straight to the engine and
+    // never goes through controls, so the sync has to ride on the button itself.
+    loopButton.addEventListener('click', () => syncInfinite(!loopButton.classList.contains('on')));
+
     const loopControl = controls.get('LOOP');
     controls.set('LOOP', {
         set(value) {

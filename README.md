@@ -17,7 +17,7 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | `src/reset.js` | `HPA.reset()` — puts the shipped settings back. |
 | `src/show.js` | `HPA.show()` — the autopilot behind the show modes. |
 | `src/export.js` | `HPA.exportModel()` — the target as an OBJ / PLY model. |
-| `src/import.js` | `HPA.importModel()` — a Blender OBJ / PLY mesh as the target. |
+| `src/import.js` | `HPA.importModel()` — a Blender OBJ / PLY mesh as 3D points. |
 | `src/controller.js` | Every section of the panel, in the order it appears. |
 | `src/style.css`, `src/controller.css` | Styling. |
 | `res/hpa-glyph.svg` | Optional flat target (the default is the 3D ball). |
@@ -149,7 +149,7 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 
 | Section | What it does |
 | :--- | :--- |
-| **Target** | Ball (3D), cube (3D), spear (3D), the flat glyph, five procedural shapes, any image, or a mesh file — load, drop or paste, then **Rebuild**. |
+| **Target** | Ball (3D), cube (3D), spear (3D), imported mesh (3D), the flat glyph, five procedural shapes, any image, or a mesh file — load, drop or paste, then **Rebuild**. |
 | **Title** | The caption under the shape and its size. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
 | **Camera** | Spin speed, zoom, settle angle, tilt and pan, outside / inside view. |
@@ -185,9 +185,16 @@ Blender itself. The two formats above are how the geometry gets into Blender wit
 ### Model import
 
 **Target → Model file…**, or drop the file on the page, reads a mesh exported from Blender —
-**Wavefront `.obj`**, or **Stanford `.ply`** (ASCII or little-endian binary) — and rebuilds the
-target from its vertices, seen from the front: X across, Y up, fitted to the frame. Density,
-depth and point size behave as for any other target, and **Capture → Model** writes it back out.
+**Wavefront `.obj`**, or **Stanford `.ply`** (ASCII or little-endian binary, with or without
+faces) — and turns it into a **3D point cloud**, not a front-view picture.
+
+The mesh is centred on its bounding box and fitted to the same height as the built-in shapes, its
+triangles are sampled area-weighted up to ~18 000 points (so a Blender cube — 8 vertices, 12
+triangles — arrives as a solid cube rather than eight dots), and files with no faces come in as
+their vertices. Because the points keep their Z, the import behaves like the ball: turning shows
+the far side, **Tilt** shows the top, inside view walks into it, and **Capture → Model** writes the
+same points back out. Density, depth and point size behave as for any other target. The target
+list then reads **Imported mesh (3D)**.
 
 A `.blend` itself cannot be read here, for the same reason it cannot be written: it is Blender's
 memory image plus that version's DNA schema, and Blender now saves it zstd-compressed by default,
@@ -226,7 +233,8 @@ HPA.set({ TILT: 0, PAN_X: 0, PAN_Y: 0 });           // head-on, centred
 HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + endless turn
 HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly settles at
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
-HPA.setMask('cube');                                // 'ball', 'spear', 'cube' or an image URL
+HPA.setMask('cube');                                // 'ball', 'spear', 'cube', 'mesh' or an image URL
+HPA.setPointCloud(points);                          // any [{x, y, z}, …] as the target, in 3D
 HPA.rebuild();                                      // resample and restart
 HPA.resetRotation();                                // endless turn back to the settle angle
 HPA.reset();                                        // shipped settings back, assemble again
@@ -235,7 +243,7 @@ HPA.show({ mode: 'visualizer', preset: 'chaos', pulse: 0.6, drift: 0.4 });
 HPA.show.reset();                                   // autopilot off, picture restored
 HPA.geometry();                                     // the target's points, [{x, y, z}, …]
 HPA.exportModel('obj');                             // download the target ('obj' | 'ply')
-HPA.importModel(file);                              // OBJ / PLY mesh in, as the target
+HPA.importModel(file);                              // OBJ / PLY mesh in, as 3D points
 HPA.setAudio(0.7);                                  // 0..1, drives size and glow
 HPA.setSpectrum(bands);                             // Float32Array(64), 0..1 per band
 HPA.capture('image/png');                           // data URL

@@ -22,7 +22,7 @@
     /*--- Configuration ---*/
 
     const CONFIG = {
-        MASK_SRC: 'spear',           // 'spear' or any image URL / data URL
+        MASK_SRC: 'ball',            // 'ball', 'spear' or any image URL / data URL
         MODE: 'shape',               // 'shape' | 'equalizer'
         VIEW: 'orbit',               // 'orbit' | 'inside'
         ZOOM: 1.0,
@@ -345,6 +345,7 @@
     }
 
     async function sampleMask(source) {
+        if (source === 'ball') return ballPoints();
         if (source === 'spear') return spearPoints();
 
         const image = await loadImage(source);
@@ -404,6 +405,55 @@
     }
 
     /*--- Shapes ---*/
+
+    // A ball: a sphere sampled on its surface, part of it on a latitude/longitude grid so
+    // it reads as a clean globe instead of a fuzzy cloud.
+    function ballPoints() {
+        const points = [];
+        const radius = CONFIG.MASK_HEIGHT * 0.45;
+
+        const clamp01 = (value) => Math.max(0, Math.min(1, value));
+        const add = (x, y, z, wait) => points.push({ x, y, z, wait: clamp01(wait) });
+        const waitFor = (x, y, z) => clamp01(Math.hypot(x, y, z) / radius * 0.78 + Math.random() * 0.15);
+
+        // Meridians.
+        for (let m = 0; m < 24; m++) {
+            const lon = (m / 24) * Math.PI * 2;
+            for (let i = 0; i < 120; i++) {
+                const lat = (Math.random() * 2 - 1) * Math.PI / 2;
+                const x = Math.cos(lat) * Math.cos(lon) * radius;
+                const y = Math.sin(lat) * radius;
+                const z = Math.cos(lat) * Math.sin(lon) * radius;
+                add(x, y, z, waitFor(x, y, z));
+            }
+        }
+
+        // Parallels.
+        for (let p = 0; p < 12; p++) {
+            const lat = ((p + 0.5) / 12) * Math.PI - Math.PI / 2;
+            const ring = Math.cos(lat) * radius;
+            const y = Math.sin(lat) * radius;
+            for (let i = 0; i < 160; i++) {
+                const lon = Math.random() * Math.PI * 2;
+                const x = Math.cos(lon) * ring;
+                const z = Math.sin(lon) * ring;
+                add(x, y, z, waitFor(x, y, z));
+            }
+        }
+
+        // Skin between the lines.
+        for (let i = 0; i < 6000; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(Math.random() * 2 - 1);
+            const shell = radius * (0.97 + Math.random() * 0.03);
+            const x = Math.sin(phi) * Math.cos(theta) * shell;
+            const y = Math.cos(phi) * shell;
+            const z = Math.sin(phi) * Math.sin(theta) * shell;
+            add(x, y, z, waitFor(x, y, z));
+        }
+
+        return points;
+    }
 
     // A real 3D spear, sampled on its surfaces: pommel, ferrule, wrapped shaft, socket
     // collar and a lens-sectioned blade. It lies along X so the Y spin shows every side.
@@ -694,7 +744,10 @@
 
         const zoom = Math.max(0.35, Math.min(6, Number(CONFIG.ZOOM) || 1));
         const inside = CONFIG.VIEW === 'inside';
-        const distance = (inside ? 2.0 : 10.6 - 1.5 * easeOutCubic(progress)) / zoom;
+        // The ball wants the camera well inside its shell; the spear reads better from
+        // just inside its tip, where the shaft crosses the frame.
+        const insideDistance = CONFIG.MASK_SRC === 'spear' && CONFIG.MODE !== 'equalizer' ? 2.0 : 1.1;
+        const distance = (inside ? insideDistance : 10.6 - 1.5 * easeOutCubic(progress)) / zoom;
 
         const eqMode = CONFIG.MODE === 'equalizer';
         const shake = CONFIG.SHAKE * (1 - progress * 0.85);
@@ -749,7 +802,8 @@
             gl.uniformMatrix4fv(particleUniforms.uModel, false, model);
             gl.uniform1f(particleUniforms.uProgress, progress);
             gl.uniform1f(particleUniforms.uTime, seconds);
-            gl.uniform1f(particleUniforms.uPointSize, CONFIG.POINT_SIZE * (inside ? 0.5 : 1) * (eqMode ? 0.75 : 1));
+            const insideScale = CONFIG.MASK_SRC === 'spear' ? 0.5 : 0.9;
+            gl.uniform1f(particleUniforms.uPointSize, CONFIG.POINT_SIZE * (inside ? insideScale : 1) * (eqMode ? 0.75 : 1));
             gl.uniform1f(particleUniforms.uPixelScale, pixelScale);
             gl.uniform1f(particleUniforms.uFade, fade);
             gl.uniform1f(particleUniforms.uHalfDepth, CONFIG.MASK_DEPTH * 0.5);

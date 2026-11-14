@@ -868,6 +868,21 @@
         scheduleShuffle();
     }
 
+    // How long the endless turn takes to come right round, at the speed the particle window is
+    // actually set to. A frozen target (0, or next to it) has no turn to wait for.
+    function turnSeconds() {
+        const api = playerApi();
+        const speed = Math.abs(Number(api && api.config ? api.config.ROTATE_SPEED : 0)) || 0;
+        return speed > 0.01 ? (Math.PI * 2) / speed : 0;
+    }
+
+    // The shuffle waits for the turn. A new target arrives spinning from its settle angle, so
+    // swapping it out sooner than one full turn means you only ever see its front: at the
+    // shipped 0.064 turns/s a turn is about 16 s, which is why the 12 s default never got round.
+    function shuffleSeconds() {
+        return Math.max(4, Number(show.shuffle) || 12, turnSeconds());
+    }
+
     // Chaos swaps the target and tint on a timer, through the same path as Random shape, so
     // the procedural targets are in the rotation as well as the ball, cube and spear.
     function scheduleShuffle() {
@@ -881,7 +896,7 @@
                 api.set({ COLOR: SHOW_TINTS[Math.floor(Math.random() * SHOW_TINTS.length)] });
             }
             scheduleShuffle();
-        }, Math.max(4, Number(show.shuffle) || 12) * 1000);
+        }, shuffleSeconds() * 1000);
     }
 
     function resetShow() {

@@ -14,7 +14,9 @@ Written by **Jackrabbit72380**. No libraries, no build step.
 | `src/engine.js` | The whole engine — shapes, buffers, shaders, `window.HPA`. |
 | `src/relay.js` | Offers the particle window to its opener, so a reloaded panel re-attaches. |
 | `src/reset.js` | `HPA.reset()` — puts the shipped settings back. |
+| `src/show.js` | `HPA.show()` — the autopilot behind the show modes. |
 | `src/controller.js` | Panel logic and the link to the particle window. |
+| `src/show-panel.js` | The panel's **Show** section. |
 | `src/style.css`, `src/controller.css` | Styling. |
 | `res/hpa-glyph.svg` | Optional flat target (the default is the 3D ball). |
 
@@ -81,6 +83,30 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 | **Outside view** | Orbit camera looking in at the object. |
 | **Inside view** | Camera sits inside the ball's shell (or just inside the spear's tip), so the shape wraps around you. |
 
+## Show
+
+The **Show** section runs the animation by itself. Pick a mode and leave it running.
+
+| Mode | What it does |
+| :--- | :--- |
+| **Inside spin** | Puts the camera inside the ball, turns the rebuild loop off and lets the endless spin carry the view round forever. |
+| **Music visualizer** | The zoom rises and falls with the audio level and the tint walks round the wheel; how hard is the **Zoom pulse** slider. |
+| **Rainbow** | The tint sweeps the whole wheel on its own — a turn every five seconds at rest, faster as **Colour drift** goes up. |
+| **Off** | Hands the picture back: the original tint and zoom return and the panel is in charge again. |
+
+Three visualizer presets:
+
+| Preset | Character |
+| :--- | :--- |
+| **Pulse** | Punchy zoom on the level, steady target, slow colour. |
+| **Drift** | Softer zoom, much faster colour travel. |
+| **Chaos** | Strong zoom, fast colour, and a new target and tint every **Shuffle every** seconds (4–40 s). |
+
+Shuffle picks shapes with the panel's own *Random shape* button, so the procedural targets are in
+the rotation as well as the ball and spear. **Zoom pulse**, **Colour drift** and **Shuffle every**
+apply live; the level comes from whatever the Audio response section is listening to, and with no
+audio the visualizer still breathes on its own.
+
 ## Controller
 
 | Section | What it does |
@@ -89,6 +115,7 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 | **Target** | Ball (3D), spear (3D), the flat glyph, six procedural shapes, or any image — load, drag-and-drop or paste, then **Rebuild**. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
 | **Camera** | Spin speed, zoom, settle angle, outside / inside view. |
+| **Show** | Inside spin, music visualizer and rainbow modes, their presets, and the shuffle timer. |
 | **Visualizer** | Equalizer ring on/off and its band height. |
 | **Timing** | Assembly, hold and fade durations, plus the rebuild loop toggle. |
 | **Look** | Tint, glow falloff, chromatic rim, caption text and size. |
@@ -98,7 +125,7 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 
 **Reset** in the top-right puts every setting back to the shipped defaults — in the particle
 window and in the panel — and starts the assembly over: ball target, 0.064 turns/s, settle angle
-0°, loop on, tint `#a1d6ff`.
+0°, loop on, tint `#a1d6ff`, show mode off.
 
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
@@ -135,6 +162,9 @@ HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
 HPA.setMask('ball');                                // 'ball', 'spear' or an image URL / data URL
 HPA.rebuild();                                      // resample and restart
 HPA.reset();                                        // shipped settings back, assemble again
+HPA.show({ mode: 'rainbow' });                      // 'off' | 'inside' | 'visualizer' | 'rainbow'
+HPA.show({ mode: 'visualizer', preset: 'chaos', pulse: 0.6, drift: 0.4 });
+HPA.show.reset();                                   // autopilot off, picture restored
 HPA.setAudio(0.7);                                  // 0..1, drives size and glow
 HPA.setSpectrum(bands);                             // Float32Array(64), 0..1 per band
 HPA.capture('image/png');                           // data URL

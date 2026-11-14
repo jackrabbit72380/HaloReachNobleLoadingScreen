@@ -178,12 +178,17 @@ Three visualizer presets:
 | :--- | :--- |
 | **Pulse** | Punchy zoom on the level, steady target, slow colour. |
 | **Drift** | Softer zoom, much faster colour travel. |
-| **Chaos** | Strong zoom, fast colour, and a new target and tint every **Shuffle every** seconds (4–40 s). |
+| **Chaos** | Strong zoom, fast colour, and a new target and tint every **Shuffle every** seconds (4–40 s) — but never sooner than one full turn at the current **Spin speed**, so each shape is seen all the way round before it goes. |
 
 Shuffle picks shapes with the panel's own *Random shape* button, so the procedural targets are in
 the rotation as well as the ball and spear. **Zoom pulse**, **Colour drift** and **Shuffle every**
 apply live; the level comes from whatever the Audio response section is listening to, and with no
 audio the visualizer still breathes on its own.
+
+The minimum interval is worked out from the particle window's own `ROTATE_SPEED`, not from the
+slider: at the shipped 0.064 turns/s a turn takes about 16 s, so even **Shuffle every** set to 4 s
+changes the shape once per turn. Spin it faster and the shuffle follows it down; set spin to 0 and
+the slider alone decides, since there is no turn to wait for.
 
 **Inside spin** and **Off** move the camera as well, so the **Camera** section's *Outside view* /
 *Inside view* buttons light up to match instead of keeping whatever they had.

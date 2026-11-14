@@ -14,8 +14,9 @@
   const root = document.getElementById('sections');
   if (!root) return;
 
+  // The same shapes the Target list offers, without the ones that only make sense as a target:
+  // an imported mesh lives in memory, and a picture is flat.
   const SHAPES = [
-    ['off', 'Off'],
     ['ball', 'Ball (3D)'],
     ['cube', 'Cube (3D)'],
     ['torus', 'Torus (3D)'],
@@ -74,6 +75,15 @@
   const panel = el('div', 'section');
   panel.appendChild(el('h2', '', 'Layers'));
 
+  const buttons = el('div', 'buttons');
+  panel.appendChild(buttons);
+
+  const layerButton = el('button', '', 'Background layer');
+  layerButton.type = 'button';
+  layerButton.setAttribute('role', 'checkbox');
+  layerButton.setAttribute('aria-checked', 'false');
+  buttons.appendChild(layerButton);
+
   const sourceRow = el('div', 'row wide');
   sourceRow.appendChild(el('span', 'label', 'Background shape'));
   const sourceSelect = el('select');
@@ -84,7 +94,28 @@
   }
   sourceRow.appendChild(sourceSelect);
   panel.appendChild(sourceRow);
-  sourceSelect.addEventListener('change', () => apply({ LAYER_SRC: sourceSelect.value }));
+
+  // The on/off button keeps the shape you picked, so turning the layer back on brings the same
+  // shape back instead of starting from Off again.
+  let switchedOn = false;
+  let chosen = 'ball';
+
+  function paint() {
+    layerButton.classList.toggle('on', switchedOn);
+    layerButton.setAttribute('aria-checked', switchedOn ? 'true' : 'false');
+    sourceSelect.disabled = !switchedOn;
+  }
+
+  layerButton.addEventListener('click', () => {
+    switchedOn = !switchedOn;
+    paint();
+    apply({ LAYER_SRC: switchedOn ? chosen : 'off' });
+  });
+
+  sourceSelect.addEventListener('change', () => {
+    chosen = sourceSelect.value;
+    if (switchedOn) apply({ LAYER_SRC: chosen });
+  });
 
   // One slider shape for all three settings: label, live value, and the config key it drives.
   const sliders = {};
@@ -125,7 +156,7 @@
   slider('LAYER_ALPHA', 'Layer brightness', 0, 1, 0.05, 0.6,
     (v) => `${Math.round(v * 100)}%`);
 
-  panel.appendChild(el('div', 'note', 'The layer is drawn behind the target from its own point cloud — pick any shape, size it up until the camera sits inside it, and it turns on its own. It ignores Tilt, Pan and Pivot so the target stays exactly where you put it.'));
+  panel.appendChild(el('div', 'note', 'Background layer puts a second point cloud behind the target — pick any shape, size it up until the camera sits inside it, and it turns on its own. It ignores Tilt, Pan and Pivot, so the target stays exactly where you put it.'));
 
   // The panel sits where it always did: straight after the Visualizer section.
   const visualizer = Array.from(root.children).find((node) => {
@@ -134,6 +165,7 @@
   });
   if (visualizer) visualizer.after(panel);
   else root.appendChild(panel);
+  paint();
 
   /*--- Keeping the panel honest ---*/
 
@@ -143,8 +175,11 @@
     if (!config) return false;
 
     if ('LAYER_SRC' in config) {
-      const known = Array.from(sourceSelect.options).some((option) => option.value === config.LAYER_SRC);
-      sourceSelect.value = known ? config.LAYER_SRC : 'off';
+      const source = String(config.LAYER_SRC || 'off');
+      switchedOn = source !== 'off';
+      if (switchedOn && SHAPES.some(([value]) => value === source)) chosen = source;
+      sourceSelect.value = chosen;
+      paint();
     }
     for (const [key, update] of Object.entries(sliders)) {
       if (key in config) update(config[key]);

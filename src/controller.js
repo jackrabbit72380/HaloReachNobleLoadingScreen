@@ -344,6 +344,7 @@
         ['ball', 'Ball (3D)'],
         ['spear', 'Spear (3D)'],
         ['cube', 'Cube (3D)'],
+        ['mesh', 'Imported mesh (3D)'],
         ['res/hpa-glyph.svg', 'Glyph (flat)'],
         ['torus', 'Torus'],
         ['atom', 'Atom'],
@@ -359,7 +360,7 @@
     }
     presetRow.appendChild(presetSelect);
     sourceSection.appendChild(presetRow);
-    sourceSection.appendChild(el('div', 'note', 'Any PNG, JPEG, WebP or SVG works — dark pixels on light, or a transparent cut-out. Drop or paste it anywhere on this page. A mesh comes in as a .obj or .ply exported from Blender, seen from the front.'));
+    sourceSection.appendChild(el('div', 'note', 'Any PNG, JPEG, WebP or SVG works — dark pixels on light, or a transparent cut-out. Drop or paste it anywhere on this page. A mesh comes in as a .obj or .ply exported from Blender, and arrives as real 3D geometry with its depth intact.'));
 
     loadButton.addEventListener('click', () => fileInput.click());
     modelButton.addEventListener('click', () => modelInput.click());
@@ -379,22 +380,24 @@
     presetSelect.addEventListener('change', () => applyPreset(presetSelect.value));
 
     // One place picks the next target, so the button and the visualizer's shuffle agree.
+    // The imported mesh is left out: it is whatever file was loaded, not a shape to roll.
     function randomShape() {
         const shapeKeys = PRESETS
             .map(([value]) => value)
-            .filter((value) => value !== 'ball' && value !== 'spear' && !value.startsWith('res/'));
+            .filter((value) => value !== 'ball' && value !== 'spear' && value !== 'mesh' && !value.startsWith('res/'));
         const pick = shapeKeys[Math.floor(Math.random() * shapeKeys.length)];
         presetSelect.value = pick;
         applyPreset(pick);
         return pick;
     }
 
-    // Three targets are geometry the engine builds in 3D (ball, spear, cube); everything else
-    // is drawn flat on a canvas and sampled as a picture.
+    // Four targets are geometry the engine builds or holds in 3D (ball, spear, cube, imported
+    // mesh); everything else is drawn flat on a canvas and sampled as a picture.
     function applyPreset(value) {
         const api = playerApi();
         if (!api) return needPlayer();
-        const solid = value === 'ball' || value === 'spear' || value === 'cube' || value.startsWith('res/');
+        const solid = value === 'ball' || value === 'spear' || value === 'cube'
+            || value === 'mesh' || value.startsWith('res/');
         const source = solid ? value : makeMask(MASKS[value]);
         leaveEqualizer(api);
         api.set({ MODE: 'shape', MASK_SRC: source });
@@ -402,8 +405,8 @@
         window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1000);
     }
 
-    // A mesh from Blender's OBJ / PLY export; src/import.js does the reading and hands back
-    // how many vertices it found.
+    // A mesh from Blender's OBJ / PLY export; src/import.js does the reading — vertices and
+    // triangles — and hands the engine a point cloud, so the model keeps its depth.
     async function importModel(file) {
         const api = playerApi();
         if (!api) return needPlayer();
@@ -417,7 +420,8 @@
         try {
             const result = await api.importModel(file);
             leaveEqualizer(api);
-            setStatus(`imported ${result.vertices.toLocaleString()} vertices`, 'busy');
+            presetSelect.value = 'mesh';
+            setStatus(`${result.points.toLocaleString()} points — ${String(file.name).slice(0, 18)}`, 'busy');
             window.setTimeout(() => { if (connected) setStatus('connected', ''); }, 1800);
         } catch (error) {
             setStatus(String((error && error.message) || error), 'bad');
@@ -742,7 +746,7 @@
     }
 
     // Chaos swaps the target and tint on a timer, through the same path as Random shape, so
-    // the procedural targets are in the rotation as well as the ball and spear.
+    // the procedural targets are in the rotation as well as the ball, cube and spear.
     function scheduleShuffle() {
         window.clearTimeout(shuffleTimer);
         if (show.mode !== 'visualizer' || show.preset !== 'chaos') return;
@@ -1231,8 +1235,8 @@
         return surface.toDataURL('image/png');
     }
 
-    // Flat drawings, sampled as pictures. The ball, spear and cube are not here: the engine
-    // builds those as real 3D geometry, so they can be walked round.
+    // Flat drawings, sampled as pictures. The ball, spear, cube and imported mesh are not here:
+    // the engine builds those, or holds their points, as real 3D geometry.
     const MASKS = {
         torus(x, s) {
             const c = s / 2;

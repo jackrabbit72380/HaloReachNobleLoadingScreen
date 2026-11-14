@@ -1,9 +1,9 @@
 # Holographic Particle Accelerator
 
 A WebGL2 particle animation. Thousands of points fly in from a sphere and assemble a real 3D
-ball — or a cube, a torus, an atom, a helix, a pyramid, a star, a spear, or a mesh you bring in
-from Blender — then keep turning, hold, and rebuild. The controls live in a panel docked down the
-right-hand side of the same window: **Home** opens it, **Home** closes it.
+ball — or a cube, a torus, an atom, a helix, a pyramid, a star, a spear, the equalizer, or a mesh
+you bring in from Blender — then keep turning, hold, and rebuild. The controls live in a panel
+docked down the right-hand side of the same window: **Home** opens it, **Home** closes it.
 
 Written by **Jackrabbit72380**. No libraries, no build step.
 
@@ -72,6 +72,7 @@ by nature.
 | **Pyramid** | A square pyramid: four triangular sides, a base, ridges and corners denser. |
 | **Star** | A five-pointed star with real thickness — the rim drawn back to a point on each face. |
 | **Spear** | Pommel, ferrule, wrapped shaft, socket collar and a leaf blade along X. |
+| **Equalizer (audio bars)** | A flat disc of 64 columns that rise with the spectrum — the target that answers the music. |
 | **Imported mesh** | A Blender OBJ / PLY turned into a point cloud over its triangles. |
 | **Glyph, any image** | A picture sampled as a silhouette — flat, with a thin slab of depth. |
 
@@ -201,7 +202,7 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 | Section | What it does |
 | :--- | :--- |
 | **Reset** | The wide button at the top of the panel, above every section — the first thing in the list. |
-| **Target** | Ball, cube, torus, atom, helix, pyramid, star, spear, imported mesh — all 3D — plus the glyph or any image, load, drop or paste, then **Rebuild**. |
+| **Target** | Ball, cube, torus, atom, helix, pyramid, star, spear, the equalizer, imported mesh — all 3D — plus the glyph or any image, load, drop or paste, then **Rebuild**. |
 | **Title** | The caption under the shape and its size. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
 | **Camera** | Spin speed and turn axis, infinite rotation, zoom, settle angle, tilt, the pivot, pan, outside / inside view. |
@@ -265,10 +266,14 @@ works).
 
 ## Equalizer ring
 
-**Visualizer → Equalizer ring** replaces the shape with a flat disc of 64 bars standing on a
-plane. The plane turns with the model, and each bar rises with its own frequency band, so it
-reads as a circular graphic equalizer in 3D. Bars rise from the spectrum the panel sends 60
-times a second from whatever audio source is listening; with no audio the disc lies flat.
+The target that answers the music. **Visualizer → Equalizer ring** — or **Target → Equalizer
+(audio bars)**, the same switch in the shape list — replaces the shape with a flat disc of 64 bars
+standing on a plane. The plane turns with the model, and each bar rises with its own frequency
+band, so it reads as a circular graphic equalizer in 3D. Bars rise from the spectrum the panel
+sends 60 times a second from whatever audio source is listening; with no audio the disc lies flat.
+
+It is a mode rather than a mask (`MODE: 'equalizer'`), which is why picking it swaps the mode
+instead of the mask source, and why the last shape you had is still there when you leave it.
 
 ### Reacting to music
 

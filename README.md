@@ -1,9 +1,9 @@
 # Holographic Particle Accelerator
 
 A WebGL2 particle animation. Thousands of points fly in from a sphere and assemble a real 3D
-ball — or a spear, or a mesh you bring in from Blender — then keep turning, hold, and rebuild.
-The controls live in a panel docked down the right-hand side of the same window: **Home** opens
-it, **Home** closes it.
+ball — or a cube, a spear, or a mesh you bring in from Blender — then keep turning, hold, and
+rebuild. The controls live in a panel docked down the right-hand side of the same window:
+**Home** opens it, **Home** closes it.
 
 Written by **Jackrabbit72380**. No libraries, no build step.
 
@@ -61,9 +61,15 @@ The default target is a 3D ball: a sphere sampled on its surface with 24 meridia
 and a skin of scattered points between them (~10 800 points, radius 2.07 in world units), so it
 reads as a globe rather than a fuzzy cloud.
 
-Also built in: a 3D spear (pommel, ferrule, wrapped shaft, socket collar and a leaf blade along
-X), the flat glyph, six procedural 2D shapes, any PNG / JPEG / WebP / SVG you load, and any OBJ /
-PLY mesh from Blender.
+Also built in: a real 3D cube, a 3D spear (pommel, ferrule, wrapped shaft, socket collar and a
+leaf blade along X), the flat glyph, five procedural 2D shapes, any PNG / JPEG / WebP / SVG you
+load, and any OBJ / PLY mesh from Blender.
+
+The cube is six flat faces sampled in three dimensions — 1 500 points a face — with the twelve
+edges and eight corners built up denser (~12 000 points, half-extent 2.07 like the ball's sphere),
+so it keeps its silhouette from every angle. It is geometry, not a picture of a cube: the old flat
+cube was a canvas drawing that only ever faced the camera, which is why it could not be walked
+round.
 
 ### Title
 
@@ -129,9 +135,9 @@ Three visualizer presets:
 | **Chaos** | Strong zoom, fast colour, and a new target and tint every **Shuffle every** seconds (4–40 s). |
 
 Shuffle picks shapes with the panel's own *Random shape* button, so the procedural targets are in
-the rotation as well as the ball and spear. **Zoom pulse**, **Colour drift** and **Shuffle every**
-apply live; the level comes from whatever the Audio response section is listening to, and with no
-audio the visualizer still breathes on its own.
+the rotation as well as the ball, cube and spear. **Zoom pulse**, **Colour drift** and **Shuffle
+every** apply live; the level comes from whatever the Audio response section is listening to, and
+with no audio the visualizer still breathes on its own.
 
 **Inside spin** and **Off** move the camera as well, so the **Camera** section's *Outside view* /
 *Inside view* buttons light up to match instead of keeping whatever they had.
@@ -143,7 +149,7 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 
 | Section | What it does |
 | :--- | :--- |
-| **Target** | Ball (3D), spear (3D), the flat glyph, six procedural shapes, any image, or a mesh file — load, drop or paste, then **Rebuild**. |
+| **Target** | Ball (3D), cube (3D), spear (3D), the flat glyph, five procedural shapes, any image, or a mesh file — load, drop or paste, then **Rebuild**. |
 | **Title** | The caption under the shape and its size. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
 | **Camera** | Spin speed, zoom, settle angle, tilt and pan, outside / inside view. |
@@ -166,11 +172,11 @@ the frame.
 
 ### Model export
 
-**Capture → Model (.obj)** or **Model (.ply)** writes the target you are looking at — ball, spear,
-glyph, a procedural shape, a loaded image or an imported mesh — as a point cloud: one vertex per
-particle, world units, Y up, no faces. Blender imports either one in a single step (File → Import
-→ Wavefront `.obj`, or New Stanford `.ply`); instance a sphere or metaball on the points to give
-them body.
+**Capture → Model (.obj)** or **Model (.ply)** writes the target you are looking at — ball, cube,
+spear, glyph, a procedural shape, a loaded image or an imported mesh — as a point cloud: one
+vertex per particle, world units, Y up, no faces. Blender imports either one in a single step
+(File → Import → Wavefront `.obj`, or New Stanford `.ply`); instance a sphere or metaball on the
+points to give them body.
 
 There is no `.blend` export, and it is not a missing feature: a `.blend` is a dump of Blender's
 own memory plus the DNA schema of the version that wrote it, and no writer exists outside
@@ -214,13 +220,13 @@ stored or uploaded. Sensitivity scales the response; the meter shows the live le
 ```js
 HPA.set({ COLOR: [1, 0.4, 0.2], POINT_SIZE: 42 });  // any CONFIG key
 HPA.set({ LABEL: 'Your title' });                   // the line under the shape
-HPA.set({ CAPTION_SCALE: 1.4 });                     // and how big it is
+HPA.set({ CAPTION_SCALE: 1.4 });                    // and how big it is
 HPA.set({ VIEW: 'inside', ZOOM: 2.4 });             // camera
 HPA.set({ TILT: 0, PAN_X: 0, PAN_Y: 0 });           // head-on, centred
 HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + endless turn
 HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly settles at
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
-HPA.setMask('ball');                                // 'ball', 'spear' or an image URL / data URL
+HPA.setMask('cube');                                // 'ball', 'spear', 'cube' or an image URL
 HPA.rebuild();                                      // resample and restart
 HPA.resetRotation();                                // endless turn back to the settle angle
 HPA.reset();                                        // shipped settings back, assemble again

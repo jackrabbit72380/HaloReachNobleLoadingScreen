@@ -8,7 +8,7 @@
  *  no message protocol.
  *
  *  Every section of the panel is built here, in the order it appears:
- *    Target, Title, Particles, Camera, Show, Visualizer, Timing, Look, Effects, Audio, Capture
+ *    Reset, Target, Title, Particles, Camera, Show, Visualizer, Timing, Look, Effects, Audio, Capture
  */
 
 (() => {
@@ -161,6 +161,17 @@
     focusButton.addEventListener('click', focusPlayer);
     closeButton.addEventListener('click', closePlayer);
     resetButton.addEventListener('click', resetAll);
+
+    // Reset sits at the very top of the panel, above every section: it is the control you reach
+    // for when something looks wrong, and a small button up in the bar was easy to miss. The
+    // same button, moved — there is still one Reset, in one place, in both windows.
+    const resetSection = el('div', 'section');
+    const resetRow = el('div', 'buttons');
+    resetSection.appendChild(resetRow);
+    sectionsRoot.insertBefore(resetSection, sectionsRoot.firstChild);
+    resetButton.classList.remove('ghost');
+    resetButton.style.width = '100%';
+    resetRow.appendChild(resetButton);
 
     // Puts both sides back to the shipped settings: the engine restores its CONFIG,
     // resamples the default ball and restarts the assembly, then every control here is

@@ -22,6 +22,11 @@
         // The show autopilot is not part of CONFIG, so it is switched off here instead.
         if (api.show && api.show.reset) api.show.reset();
 
+        // The endless turn is accumulated outside CONFIG, so it has to be put back too —
+        // otherwise the settle angle returns but the shape keeps the offset it had wound up,
+        // and a reset only looks half done.
+        if (api.resetRotation) api.resetRotation();
+
         // set() is what makes the engine act on the values: it re-derives the accent and the
         // caption, resamples the target and starts the assembly again from zero.
         return api.set({

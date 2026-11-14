@@ -3,8 +3,8 @@
  *  2026
  *
  *  A GPU particle animation. Thousands of points fly in from a sphere and assemble
- *  whatever image they are pointed at, hold, fade, and rebuild. Controls live in
- *  controller.html; this file only renders and exposes window.HPA.
+ *  whatever image they are pointed at, hold, fade, and rebuild. The controls live in the
+ *  docked panel; this file only renders and exposes window.HPA.
  *
  *  Deliberately dependency free: WebGL2, one buffer, two programs, no build step.
  *
@@ -729,7 +729,7 @@
 
         // The endless turn is accumulated rather than derived from the clock, so it never
         // jumps or pauses when a cycle rebuilds the shape, and it keeps going while LOOP
-        // is off (assemble once, then turn forever).
+        // is off (assemble once, then turn forever). resetRotation() is what starts it over.
         const frameSeconds = lastTick ? Math.min(0.1, (now - lastTick) / 1000) * TIME_SCALE : 0;
         lastTick = now;
         if (seconds > CONFIG.ASSEMBLY_MS / 1000) spinAccum += frameSeconds * CONFIG.ROTATE_SPEED;
@@ -927,6 +927,14 @@
             if ('ASSEMBLY_MS' in patch || 'HOLD_MS' in patch || 'FADE_MS' in patch) startedAt = 0;
             return Promise.resolve({ count: scene ? scene.count : 0 });
         },
+        // The endless turn is accumulated per frame so a cycle can rebuild under it without the
+        // pose jumping. That also means a clean start needs it zeroed: otherwise the settle angle
+        // comes back but the shape keeps whatever offset it had wound up, which is what made a
+        // reset feel like it had not quite taken. Returns the angle now in effect (0).
+        resetRotation() {
+            spinAccum = 0;
+            return spinAccum;
+        },
         setAudio(level) {
             CONFIG.AUDIO = Math.max(0, Math.min(1, Number(level) || 0));
         },
@@ -946,6 +954,7 @@
             return {
                 count: scene ? scene.count : 0,
                 maskCount: scene ? scene.maskCount : 0,
+                spin: spinAccum,
                 canvas: [canvas.width, canvas.height],
                 config: JSON.parse(JSON.stringify(CONFIG))
             };

@@ -63,6 +63,8 @@
                 setStatus('connected', '');
                 break;
 
+            // The engine replies with the new state after every apply, so any busy
+            // label can be cleared here instead of being left on screen.
             case 'state':
                 setStatus('connected', '');
                 break;

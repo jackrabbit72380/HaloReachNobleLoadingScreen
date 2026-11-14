@@ -87,10 +87,10 @@ rotate indefinitely. With the loop on, the same endless turn keeps running throu
 | **Settle angle** | The yaw the assembly comes to rest at, in degrees. |
 | **Rebuild loop** | On: assemble, hold, fade, rebuild forever. Off: assemble once and keep turning. |
 
-That accumulation is also why **Reset** has to zero it: putting the settle angle back is not
-enough on its own, because the old offset would be added on top — 120° setted plus two radians
-of turn is not the same pose as a fresh page. `HPA.reset()` therefore calls `HPA.resetRotation()`,
-and the assembly starts again from the settle angle you shipped with.
+That accumulation is also why **Reset** has to zero it: restoring the settle angle is not enough
+on its own, because the turn already banked would be added on top of it. `HPA.reset()` therefore
+calls `HPA.resetRotation()`, and the assembly starts again from the settle angle you shipped
+with — a reset really is the fresh-page pose.
 
 ## Camera
 

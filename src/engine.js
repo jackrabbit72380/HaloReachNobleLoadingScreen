@@ -4,8 +4,7 @@
  *
  *  A GPU particle animation: points fly in from a sphere, assemble whatever target they are
  *  pointed at, hold, fade and rebuild. Dependency free — WebGL2, one buffer, two programs.
- *  Every target is built here: ball, cube, torus, atom, helix, pyramid, star, spear, and the
- *  two audio planes — the equalizer wheel and the grid.
+ *  Every target is built here: the shapes, the equalizer wheel and the audio grid.
  *
  *  URL flags: ?4k ?2k ?sd  ?halfspeed  ?quarterspeed  ?nocaption  ?nocontrols
  */
@@ -450,8 +449,7 @@
 
     /*--- Shapes ---*/
 
-    // A point picked inside a triangle, by barycentric coordinates. The flat-faced shapes —
-    // cube, pyramid, star — are built out of these.
+    // A point picked inside a triangle, by barycentric coordinates — the flat-faced shapes.
     function trianglePoint(a, b, c) {
         let u = Math.random();
         let v = Math.random();
@@ -638,20 +636,24 @@
 
         const A = 1.85;
         const B = 0.62;
-        // The orbits stand up out of the flat plane by default — a quarter turn about X — and
-        // fan either side of vertical, so the atom reads as an atom from the front.
-        const UPRIGHT = Math.PI / 2;
-
+        // The orbits stand up out of the flat plane by default, so the atom reads as an atom
+        // from the front, each fanned 60° round the view axis and tipped slightly apart.
         for (let orbit = 0; orbit < 3; orbit++) {
-            const lean = UPRIGHT + (orbit - 1) * 0.62;
-            const sinLean = Math.sin(lean);
-            const cosLean = Math.cos(lean);
+            const fan = (orbit * Math.PI) / 3;
+            const cosFan = Math.cos(fan);
+            const sinFan = Math.sin(fan);
+            const tip = (orbit - 1) * 0.35;
+            const cosTip = Math.cos(tip);
+            const sinTip = Math.sin(tip);
 
-            // A point on this orbit: an ellipse half-height B, stood up round X by `lean`.
+            // A point on this orbit: an ellipse half-height B, standing up in the view plane,
+            // turned by `fan` round it and tipped back by `tip`.
             const at = (t) => {
                 const across = Math.cos(t) * A;
                 const along = Math.sin(t) * B;
-                return [across, -along * sinLean, along * cosLean];
+                const px = across * cosFan - along * sinFan;
+                const py = across * sinFan + along * cosFan;
+                return [px, py * cosTip, py * sinTip];
             };
 
             for (let i = 0; i < 2400; i++) {
@@ -1066,7 +1068,6 @@
     }
 
     // How hard a point answers the music: the middle barely moves, the outer surface swells.
-    // Small weights on purpose — a full-scale band should swell a shape, not blow it up.
     function reactOf(point, reach) {
         const outward = Math.min(1, Math.hypot(point.x, point.y, point.z) / reach);
         return 0.05 + 0.13 * outward;
@@ -1344,8 +1345,7 @@
         ready,
         rebuild: () => rebuild(true),
         setMask: (src) => { CONFIG.MASK_SRC = src; return rebuild(true); },
-        // An imported mesh: points in world units, fitted by src/import.js. Kept beside CONFIG
-        // because it is geometry, not a number to slide — and points keep its depth.
+        // An imported mesh: points in world units, fitted by src/import.js, kept beside CONFIG.
         setPointCloud(points) {
             cloudPoints = Array.isArray(points) && points.length ? points : null;
             CONFIG.MASK_SRC = cloudPoints ? 'mesh' : 'ball';
@@ -1365,8 +1365,7 @@
             if ('ASSEMBLY_MS' in patch || 'HOLD_MS' in patch || 'FADE_MS' in patch) startedAt = 0;
             return Promise.resolve({ count: scene ? scene.count : 0 });
         },
-        // The endless turn is accumulated per frame, so a clean start has to zero it or a reset
-        // leaves the offset it had wound up. Returns the angle now in effect (0).
+        // The endless turn is accumulated per frame, so a clean start has to zero it.
         resetRotation() {
             spinAccum = 0;
             return spinAccum;
@@ -1386,8 +1385,7 @@
         geometry() {
             return scene && scene.points ? scene.points : [];
         },
-        // A zoom that frames the whole target, from its reach, the assembled camera distance
-        // and the field of view — an imported model can be any size.
+        // A zoom that frames the whole target, from its reach and the camera distance.
         fitZoom() {
             const radius = (scene && scene.radius) || CONFIG.MASK_HEIGHT * 0.45;
             if (!(radius > 0)) return 1;

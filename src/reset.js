@@ -17,26 +17,16 @@
     const DEFAULTS = clone(api.config);
 
     api.reset = () => {
-        for (const key of Object.keys(DEFAULTS)) api.config[key] = clone(DEFAULTS[key]);
-
-        // The show autopilot is not part of CONFIG, so it is switched off here instead.
+        // Two things live outside CONFIG and so cannot ride along with it: the show autopilot
+        // (switched off here, before the settings land, so its tint and zoom cannot win) and the
+        // endless turn, which is accumulated in the engine.
         if (api.show && api.show.reset) api.show.reset();
-
-        // The endless turn is accumulated outside CONFIG, so it has to be put back too —
-        // otherwise the settle angle returns but the shape keeps the offset it had wound up,
-        // and a reset only looks half done.
         if (api.resetRotation) api.resetRotation();
 
-        // set() is what makes the engine act on the values: it re-derives the accent and the
-        // caption, resamples the target and starts the assembly again from zero.
-        return api.set({
-            COLOR: clone(DEFAULTS.COLOR),
-            LABEL: DEFAULTS.LABEL,
-            CAPTION_SCALE: DEFAULTS.CAPTION_SCALE,
-            MODE: DEFAULTS.MODE,
-            MASK_SRC: DEFAULTS.MASK_SRC,
-            VIEW: DEFAULTS.VIEW,
-            ASSEMBLY_MS: DEFAULTS.ASSEMBLY_MS
-        });
+        // One call is enough. set() assigns every key of the patch, re-derives the accent and the
+        // caption from them, and — because the snapshot carries the buffer keys (MASK_SRC, MODE,
+        // SAMPLE_WIDTH, DUST_PARTICLES, MASK_DEPTH) — resamples the target and restarts the
+        // assembly from zero. Written as one call so there is no half-restored CONFIG in between.
+        return api.set(clone(DEFAULTS));
     };
 })();

@@ -101,7 +101,8 @@ the same endless turn keeps running through each rebuild.
 
 | Control | What it does |
 | :--- | :--- |
-| **Spin speed** | Turns per second of the endless turn — one turn is 360°. 0 freezes the pose. |
+| **Spin speed** | Turns per second of the endless turn — one turn is 360°. 0 freezes the pose; below 0 turns the other way. |
+| **Turn axis** | **Y — turntable** (the default), **X — tumble**, **Z — roll**: which axis the endless turn goes round. |
 | **Settle angle** | The yaw the assembly comes to rest at, in degrees. |
 | **Rebuild loop** | On: assemble, hold, fade, rebuild forever. Off: assemble once and keep turning. |
 
@@ -114,7 +115,8 @@ with — a reset really is the fresh-page pose.
 
 | Control | What it does |
 | :--- | :--- |
-| **Spin speed** | Turns per second, first slider in the section, right above Zoom. |
+| **Spin speed** | Turns per second, first slider in the section, right above the three turn buttons. Negative turns it the other way. |
+| **Turn axis** | Y (turntable), X (tumble) or Z (roll) — the axis the endless turn goes round. |
 | **Zoom** | Camera distance, 0.35×–6×. The mouse wheel over the particle window does the same. |
 | **Outside view** | Orbit camera looking in at the object. |
 | **Inside view** | Camera sits inside the ball's shell (or just inside the spear's tip), so the shape wraps around you. |
@@ -130,20 +132,31 @@ The pitch used to be a fixed lean, which is why shapes always looked like they w
 from above. It now comes from **Tilt** (default 0°), so a fresh page shows the target level, and
 the old slow wobble is available separately as `SWAY` if you want the pose to breathe again.
 
-### Where it turns
+### Where it turns, and which way
 
-The **Pivot** sliders decide what the object turns *around*. Every built-in shape is built around
-its own middle, so 0 is right for them. An imported model is centred on its bounding box too,
-which is usually not where you want the axis: a figure reads right spinning on its feet, a sword
-on its hilt, a building on its ground floor. Drag **Pivot Y** until the axis sits where you want
-(a target that spans the usual 4.6 units wants about −2 for its base), or press **Pivot: base** and
-let the panel read the target's points and put the axis on the lowest one. **Pivot X** and
-**Pivot Z** do the same across and through, for a model that should turn about a handle or a
-corner rather than its middle.
+Two settings decide the motion, and an imported model usually needs both.
 
-The pivot is part of the model matrix, not the geometry: **M = T(P) · R · T(−P)**, so the axis
-moves and the mesh does not. Turning it does not resample anything, **Capture → Model** still
-writes the model where it really sits, and Reset puts all three back to 0.
+**Pivot** is the point the turn goes around. Every built-in shape is built around its own middle,
+so 0 is right for them. An imported model is centred on its bounding box too, which is usually not
+where you want the axis: a figure reads right spinning on its feet, a sword on its hilt, a building
+on its ground floor. Drag **Pivot Y** until the axis sits where you want (a target that spans the
+usual 4.6 units wants about −2 for its base), or press **Pivot: base** and let the panel read the
+target's points and put the axis on the lowest one. **Pivot X** and **Pivot Z** do the same across
+and through, for a model that should turn about a handle or a corner rather than its middle.
+
+**Turn axis** is the direction it turns. The shipped setting is **Y**, a turntable — right for a
+ball, a spear, a statue. It is wrong for anything flat, which is the usual case with a map: a sheet
+lying down has almost no height for the eye to read, so a Y turn just spins it inside its own plane
+and it reads as a sliver flicking about. **X** tumbles it end over end and **Z** rolls it side to
+side — one of those three is the sweep you are after, and which one depends on how the file was
+exported (Blender's OBJ / PLY export is Y up, so a map modelled on Blender's floor arrives lying in
+XZ). Nothing is resampled by changing it, and a negative **Spin speed** sends the turn the other
+way without moving the camera.
+
+Both are part of the model matrix: **M = T(P) · R · T(−P)**, where R is the pitch you set with
+Tilt times the turn about the chosen axis. Moving the pivot or the axis does not resample
+anything, **Capture → Model** still writes the model where it really sits, and Reset puts the
+pivot back to 0, 0, 0 and the axis back to Y.
 
 ## Show
 
@@ -182,7 +195,7 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 | **Target** | Ball, cube, torus, atom, helix, pyramid, star, spear, imported mesh — all 3D — plus the glyph or any image, load, drop or paste, then **Rebuild**. |
 | **Title** | The caption under the shape and its size. |
 | **Particles** | Density, point size, slab depth, spin turns, dust motes. |
-| **Camera** | Spin speed, zoom, settle angle, tilt, the pivot, pan, outside / inside view. |
+| **Camera** | Spin speed and turn axis, zoom, settle angle, tilt, the pivot, pan, outside / inside view. |
 | **Show** | Inside spin, music visualizer and rainbow modes, their presets, and the shuffle timer. |
 | **Visualizer** | Equalizer ring on/off and its band height. |
 | **Timing** | Assembly, hold and fade durations, plus the rebuild loop toggle. |
@@ -192,10 +205,10 @@ below lists them, so a control's markup and the engine call it makes sit togethe
 | **Capture** | PNG frame, WebP frame, WebM 5 s / 10 s, MP4 8 s where the browser supports it, and the model download — captured inside the particle window. |
 
 **Reset** in the top-right puts every setting back to the shipped defaults — in the engine and
-in the panel — and starts the assembly over: ball target, the shipped caption, 0.064 turns/s,
-settle angle 0°, tilt 0°, pivot 0, 0, 0, no pan, loop on, tint `#a1d6ff`, show mode off, and the
-accumulated turn back to zero so the pose is the fresh-page one rather than that angle plus
-whatever it had turned.
+in the panel — and starts the assembly over: ball target, the shipped caption, 0.064 turns/s on
+the Y axis, settle angle 0°, tilt 0°, pivot 0, 0, 0, no pan, loop on, tint `#a1d6ff`, show mode
+off, and the accumulated turn back to zero so the pose is the fresh-page one rather than that
+angle plus whatever it had turned.
 
 Everything is applied live except density, depth, dust and the visualizer mode, which rebuild
 the particle buffer. Video is captured from the canvas only, so the caption overlay is not in
@@ -218,18 +231,17 @@ Blender itself. The two formats above are how the geometry gets into Blender wit
 **Wavefront `.obj`**, or **Stanford `.ply`** (ASCII or little-endian binary, with or without
 faces) — and turns it into a **3D point cloud**, not a front-view picture.
 
-The mesh is centred on its bounding box and fitted to the same height as the built-in shapes, its
-triangles are sampled area-weighted up to ~18 000 points (so a Blender cube — 8 vertices, 12
-triangles — arrives as a solid cube rather than eight dots), and files with no faces come in as
-their vertices. Because the points keep their Z, the import behaves like the other shapes:
-turning shows the far side, **Tilt** shows the top, inside view walks into it, and **Capture →
-Model** writes the same points back out. Density, depth and point size behave as for any other
-target. The target list then reads **Imported mesh (3D)**.
+The mesh is centred on its bounding box and fitted to the same size as the built-in shapes by its
+longest side, its triangles are sampled area-weighted up to ~18 000 points (so a Blender cube —
+8 vertices, 12 triangles — arrives as a solid cube rather than eight dots), and files with no
+faces come in as their vertices. Because the points keep their Z, the import behaves like the
+other shapes: turning shows the far side, **Tilt** shows the top, inside view walks into it, and
+**Capture → Model** writes the same points back out. Density, depth and point size behave as for
+any other target. The target list then reads **Imported mesh (3D)**.
 
-That centring is also where the turn happens, and a bounding box is a blunt thing to guess it
-from — a model with a base, a handle or a long axis often wants to spin somewhere else. That is
-what **Camera → Pivot** is for: **Pivot: base** puts the axis on the model's own lowest point, the
-sliders put it anywhere, and neither moves the mesh.
+A flat model — a map, a plan, a relief — arrives flat, and two settings are what make it behave:
+**Turn axis** for the direction of the sweep (see *Where it turns, and which way*) and **Pivot**
+for where the axis sits. Neither moves the mesh; they only decide how it turns.
 
 A `.blend` itself cannot be read here, for the same reason it cannot be written: it is Blender's
 memory image plus that version's DNA schema, and Blender now saves it zstd-compressed by default,
@@ -266,6 +278,7 @@ HPA.set({ CAPTION_SCALE: 1.4 });                    // and how big it is
 HPA.set({ VIEW: 'inside', ZOOM: 2.4 });             // camera
 HPA.set({ TILT: 0, PAN_X: 0, PAN_Y: 0 });           // head-on, centred
 HPA.set({ ROTATE_SPEED: Math.PI, LOOP: false });    // radians per second + endless turn
+HPA.set({ SPIN_AXIS: 'z' });                        // 'y' turntable | 'x' tumble | 'z' roll
 HPA.set({ STOP_ANGLE: 90 });                        // the yaw the assembly settles at
 HPA.set({ PIVOT_Y: -2.07 });                        // turn on the base, not the middle
 HPA.set({ MODE: 'equalizer' });                     // 'shape' | 'equalizer'
@@ -303,6 +316,6 @@ number in turns per second, so 0.064 turns/s is the default 0.40 rad/s.
 ## Defaults
 
 `CONFIG` at the top of `src/engine.js`: 3D ball target, 260-sample mask, 6 000 dust motes,
-7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s (0.064 turns/s) endless spin from a 0° settle
-angle, tilt 0° (head-on), pivot 0, 0, 0 (the target's own centre), no pan, loop on, tint
+7 s assembly, 12 s hold, 1.2 s fade, 0.40 rad/s (0.064 turns/s) endless spin about Y from a 0°
+settle angle, tilt 0° (head-on), pivot 0, 0, 0 (the target's own centre), no pan, loop on, tint
 `#a1d6ff`, caption `Holographic Particle Accelerator`.

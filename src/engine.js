@@ -160,6 +160,7 @@
         uniform float uAudio;
         uniform float uSpectrum[64];
         uniform float uEqHeight;
+        uniform float uRadial;
 
         out float vAlpha;
         out float vShade;
@@ -191,9 +192,16 @@
 
                 // Equalizer columns: every point sits at its own slot up a bar, and the
                 // bar rises with its own spectrum band, so the disc of bars dances in 3D.
+                // Every other target gets the same two numbers from buildBuffer and pushes
+                // outward along its own radius instead, so the music runs round the shape
+                // rather than lifting the whole thing.
                 if (aEq.y > 0.0) {
                     float level = uSpectrum[int(clamp(aEq.x, 0.0, 63.0))];
-                    position.y += aEq.y * level * uEqHeight;
+                    if (uRadial > 0.5) {
+                        position += normalize(position + vec3(0.0001)) * (aEq.y * level * uEqHeight);
+                    } else {
+                        position.y += aEq.y * level * uEqHeight;
+                    }
                 }
 
                 vAlpha = uFade * smoothstep(0.02, 0.28, t);
@@ -272,7 +280,7 @@
 
     function perspective(fovDegrees, aspect, near, far) {
         const f = 1.0 / Math.tan((fovDegrees * Math.PI) / 360.0);
-        const nf = 1.0 / (near - far);
+        const nf = 1 / (near - far);
         return new Float32Array([
             f / aspect, 0, 0, 0,
             0, f, 0, 0,
@@ -969,6 +977,15 @@
 
         const randomUnit = () => Math.random() * 2 - 1;
 
+        // How far the target reaches from its middle, measured before the buffer is packed:
+        // inside view, Fit and the band weights below all need it.
+        let reach = 0;
+        for (const point of maskPoints) {
+            const distance = Math.hypot(point.x, point.y, point.z);
+            if (distance > reach) reach = distance;
+        }
+        if (!(reach > 0)) reach = 1;
+
         for (const point of maskPoints) {
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(randomUnit());
@@ -991,9 +1008,13 @@
             data[offset++] = (sy + point.y) * 0.5 + randomUnit() * 0.55;
             data[offset++] = (sz + point.z) * 0.5 + randomUnit() * 0.85;
 
+            // Which band this point answers and how hard it moves. The equalizer brings its own
+            // pair of numbers — its band, and its slot up the bar — and they win; every other
+            // target gets a band from where it sits round the turn axis and a weight from how
+            // far out it is, so Band height swells any shape with the music.
             data[offset++] = 0.0;
-            data[offset++] = point.band || 0;
-            data[offset++] = point.height || 0;
+            data[offset++] = point.band === undefined ? bandOf(point) : point.band;
+            data[offset++] = point.height === undefined ? reactOf(point, reach) : point.height;
         }
 
         for (let i = 0; i < dust; i++) {
@@ -1038,15 +1059,21 @@
         gl.bindVertexArray(null);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-        // How far the target reaches from its middle. Inside view and the Fit button need it:
-        // the built-in shapes are all one size, an imported model is whatever it is.
-        let radius = 0;
-        for (const point of maskPoints) {
-            const reach = Math.hypot(point.x, point.y, point.z);
-            if (reach > radius) radius = reach;
-        }
+        return { vao, buffer, count: total, maskCount: maskPoints.length, radius: reach };
+    }
 
-        return { vao, buffer, count: total, maskCount: maskPoints.length, radius };
+    // A band for a point that did not bring one: the angle round the turn axis, spread over
+    // the 64 slots. A flat map or a spear therefore reads its bands left to right.
+    function bandOf(point) {
+        const angle = Math.atan2(point.z, point.x);
+        return ((angle + Math.PI) / (Math.PI * 2)) * 63.999;
+    }
+
+    // How far a point answers the music: the middle of the shape barely moves, the outer
+    // surface swells, which keeps the silhouette readable while it dances.
+    function reactOf(point, reach) {
+        const outward = Math.min(1, Math.hypot(point.x, point.y, point.z) / reach);
+        return 0.12 + 0.30 * outward;
     }
 
     function disposeScene(old) {
@@ -1066,7 +1093,7 @@
     const particleUniforms = uniformsOf(particleProgram, [
         'uProjection', 'uView', 'uModel', 'uProgress', 'uTime',
         'uPointSize', 'uPixelScale', 'uFade', 'uColor', 'uColor2',
-        'uGlow', 'uChroma', 'uHalfDepth', 'uAudio', 'uSpectrum', 'uEqHeight'
+        'uGlow', 'uChroma', 'uHalfDepth', 'uAudio', 'uSpectrum', 'uEqHeight', 'uRadial'
     ]);
 
     const backgroundVao = gl.createVertexArray();
@@ -1241,6 +1268,8 @@
             gl.uniform1f(particleUniforms.uAudio, CONFIG.AUDIO);
             gl.uniform1fv(particleUniforms.uSpectrum, spectrum);
             gl.uniform1f(particleUniforms.uEqHeight, CONFIG.EQ_HEIGHT);
+            // The equalizer lifts its columns; every other target pushes its points out.
+            gl.uniform1f(particleUniforms.uRadial, eqMode ? 0 : 1);
             gl.uniform3fv(particleUniforms.uColor, CONFIG.COLOR);
             gl.uniform3fv(particleUniforms.uColor2, accent);
 
